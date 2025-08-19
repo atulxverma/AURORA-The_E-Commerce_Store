@@ -1,0 +1,105 @@
+{
+  "node": {
+    "00eb1b0548e0832326cacd9e35dda88d84f348f83b": {
+      "workers": {
+        "app/(group)/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Catulv%5C%5COneDrive%5C%5CDocuments%5C%5CDesktop%5C%5Cnodejs%5C%5CE-commerce%20App%20Final%5C%5CE-commerce%20App%20Final%5C%5Csrc%5C%5Cactions%5C%5Cprodactions.ts%22%2C%5B%7B%22id%22%3A%2200eb1b0548e0832326cacd9e35dda88d84f348f83b%22%2C%22exportedName%22%3A%22logOutUser%22%7D%2C%7B%22id%22%3A%22402be72870fca04667f83b7cd30a854d471bad0995%22%2C%22exportedName%22%3A%22signUpUser%22%7D%2C%7B%22id%22%3A%22406c7af6262fd1018ceecff406cc9c1ac6906c068d%22%2C%22exportedName%22%3A%22signInUser%22%7D%2C%7B%22id%22%3A%22406e3f425378744a4f4262e87152aaa51ea13ddd0c%22%2C%22exportedName%22%3A%22addProductToCart%22%7D%2C%7B%22id%22%3A%22409215b7dcea4371660cc5bc9db24df6a0bc236651%22%2C%22exportedName%22%3A%22deleteProductFromCart%22%7D%2C%7B%22id%22%3A%2240af6b1ab52904262fd7a5524c9b694a6acdde502e%22%2C%22exportedName%22%3A%22deleteProductFromDb%22%7D%2C%7B%22id%22%3A%2240c90c16fd4099efd687e72111060b753ea900389e%22%2C%22exportedName%22%3A%22addProductToDb%22%7D%2C%7B%22id%22%3A%22601c57354ce2a1e226806d1d5f8aa2a2b89a05565c%22%2C%22exportedName%22%3A%22updateProductInDb%22%7D%2C%7B%22id%22%3A%22607d9b123d31cb159042fffc3319dace46e4201972%22%2C%22exportedName%22%3A%22updateQuantity%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/(group)/page": "action-browser"
+      }
+    },
+    "402be72870fca04667f83b7cd30a854d471bad0995": {
+      "workers": {
+        "app/(group)/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Catulv%5C%5COneDrive%5C%5CDocuments%5C%5CDesktop%5C%5Cnodejs%5C%5CE-commerce%20App%20Final%5C%5CE-commerce%20App%20Final%5C%5Csrc%5C%5Cactions%5C%5Cprodactions.ts%22%2C%5B%7B%22id%22%3A%2200eb1b0548e0832326cacd9e35dda88d84f348f83b%22%2C%22exportedName%22%3A%22logOutUser%22%7D%2C%7B%22id%22%3A%22402be72870fca04667f83b7cd30a854d471bad0995%22%2C%22exportedName%22%3A%22signUpUser%22%7D%2C%7B%22id%22%3A%22406c7af6262fd1018ceecff406cc9c1ac6906c068d%22%2C%22exportedName%22%3A%22signInUser%22%7D%2C%7B%22id%22%3A%22406e3f425378744a4f4262e87152aaa51ea13ddd0c%22%2C%22exportedName%22%3A%22addProductToCart%22%7D%2C%7B%22id%22%3A%22409215b7dcea4371660cc5bc9db24df6a0bc236651%22%2C%22exportedName%22%3A%22deleteProductFromCart%22%7D%2C%7B%22id%22%3A%2240af6b1ab52904262fd7a5524c9b694a6acdde502e%22%2C%22exportedName%22%3A%22deleteProductFromDb%22%7D%2C%7B%22id%22%3A%2240c90c16fd4099efd687e72111060b753ea900389e%22%2C%22exportedName%22%3A%22addProductToDb%22%7D%2C%7B%22id%22%3A%22601c57354ce2a1e226806d1d5f8aa2a2b89a05565c%22%2C%22exportedName%22%3A%22updateProductInDb%22%7D%2C%7B%22id%22%3A%22607d9b123d31cb159042fffc3319dace46e4201972%22%2C%22exportedName%22%3A%22updateQuantity%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/(group)/page": "action-browser"
+      }
+    },
+    "406c7af6262fd1018ceecff406cc9c1ac6906c068d": {
+      "workers": {
+        "app/(group)/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Catulv%5C%5COneDrive%5C%5CDocuments%5C%5CDesktop%5C%5Cnodejs%5C%5CE-commerce%20App%20Final%5C%5CE-commerce%20App%20Final%5C%5Csrc%5C%5Cactions%5C%5Cprodactions.ts%22%2C%5B%7B%22id%22%3A%2200eb1b0548e0832326cacd9e35dda88d84f348f83b%22%2C%22exportedName%22%3A%22logOutUser%22%7D%2C%7B%22id%22%3A%22402be72870fca04667f83b7cd30a854d471bad0995%22%2C%22exportedName%22%3A%22signUpUser%22%7D%2C%7B%22id%22%3A%22406c7af6262fd1018ceecff406cc9c1ac6906c068d%22%2C%22exportedName%22%3A%22signInUser%22%7D%2C%7B%22id%22%3A%22406e3f425378744a4f4262e87152aaa51ea13ddd0c%22%2C%22exportedName%22%3A%22addProductToCart%22%7D%2C%7B%22id%22%3A%22409215b7dcea4371660cc5bc9db24df6a0bc236651%22%2C%22exportedName%22%3A%22deleteProductFromCart%22%7D%2C%7B%22id%22%3A%2240af6b1ab52904262fd7a5524c9b694a6acdde502e%22%2C%22exportedName%22%3A%22deleteProductFromDb%22%7D%2C%7B%22id%22%3A%2240c90c16fd4099efd687e72111060b753ea900389e%22%2C%22exportedName%22%3A%22addProductToDb%22%7D%2C%7B%22id%22%3A%22601c57354ce2a1e226806d1d5f8aa2a2b89a05565c%22%2C%22exportedName%22%3A%22updateProductInDb%22%7D%2C%7B%22id%22%3A%22607d9b123d31cb159042fffc3319dace46e4201972%22%2C%22exportedName%22%3A%22updateQuantity%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/(group)/page": "action-browser"
+      }
+    },
+    "406e3f425378744a4f4262e87152aaa51ea13ddd0c": {
+      "workers": {
+        "app/(group)/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Catulv%5C%5COneDrive%5C%5CDocuments%5C%5CDesktop%5C%5Cnodejs%5C%5CE-commerce%20App%20Final%5C%5CE-commerce%20App%20Final%5C%5Csrc%5C%5Cactions%5C%5Cprodactions.ts%22%2C%5B%7B%22id%22%3A%2200eb1b0548e0832326cacd9e35dda88d84f348f83b%22%2C%22exportedName%22%3A%22logOutUser%22%7D%2C%7B%22id%22%3A%22402be72870fca04667f83b7cd30a854d471bad0995%22%2C%22exportedName%22%3A%22signUpUser%22%7D%2C%7B%22id%22%3A%22406c7af6262fd1018ceecff406cc9c1ac6906c068d%22%2C%22exportedName%22%3A%22signInUser%22%7D%2C%7B%22id%22%3A%22406e3f425378744a4f4262e87152aaa51ea13ddd0c%22%2C%22exportedName%22%3A%22addProductToCart%22%7D%2C%7B%22id%22%3A%22409215b7dcea4371660cc5bc9db24df6a0bc236651%22%2C%22exportedName%22%3A%22deleteProductFromCart%22%7D%2C%7B%22id%22%3A%2240af6b1ab52904262fd7a5524c9b694a6acdde502e%22%2C%22exportedName%22%3A%22deleteProductFromDb%22%7D%2C%7B%22id%22%3A%2240c90c16fd4099efd687e72111060b753ea900389e%22%2C%22exportedName%22%3A%22addProductToDb%22%7D%2C%7B%22id%22%3A%22601c57354ce2a1e226806d1d5f8aa2a2b89a05565c%22%2C%22exportedName%22%3A%22updateProductInDb%22%7D%2C%7B%22id%22%3A%22607d9b123d31cb159042fffc3319dace46e4201972%22%2C%22exportedName%22%3A%22updateQuantity%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/(group)/page": "action-browser"
+      }
+    },
+    "409215b7dcea4371660cc5bc9db24df6a0bc236651": {
+      "workers": {
+        "app/(group)/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Catulv%5C%5COneDrive%5C%5CDocuments%5C%5CDesktop%5C%5Cnodejs%5C%5CE-commerce%20App%20Final%5C%5CE-commerce%20App%20Final%5C%5Csrc%5C%5Cactions%5C%5Cprodactions.ts%22%2C%5B%7B%22id%22%3A%2200eb1b0548e0832326cacd9e35dda88d84f348f83b%22%2C%22exportedName%22%3A%22logOutUser%22%7D%2C%7B%22id%22%3A%22402be72870fca04667f83b7cd30a854d471bad0995%22%2C%22exportedName%22%3A%22signUpUser%22%7D%2C%7B%22id%22%3A%22406c7af6262fd1018ceecff406cc9c1ac6906c068d%22%2C%22exportedName%22%3A%22signInUser%22%7D%2C%7B%22id%22%3A%22406e3f425378744a4f4262e87152aaa51ea13ddd0c%22%2C%22exportedName%22%3A%22addProductToCart%22%7D%2C%7B%22id%22%3A%22409215b7dcea4371660cc5bc9db24df6a0bc236651%22%2C%22exportedName%22%3A%22deleteProductFromCart%22%7D%2C%7B%22id%22%3A%2240af6b1ab52904262fd7a5524c9b694a6acdde502e%22%2C%22exportedName%22%3A%22deleteProductFromDb%22%7D%2C%7B%22id%22%3A%2240c90c16fd4099efd687e72111060b753ea900389e%22%2C%22exportedName%22%3A%22addProductToDb%22%7D%2C%7B%22id%22%3A%22601c57354ce2a1e226806d1d5f8aa2a2b89a05565c%22%2C%22exportedName%22%3A%22updateProductInDb%22%7D%2C%7B%22id%22%3A%22607d9b123d31cb159042fffc3319dace46e4201972%22%2C%22exportedName%22%3A%22updateQuantity%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/(group)/page": "action-browser"
+      }
+    },
+    "40af6b1ab52904262fd7a5524c9b694a6acdde502e": {
+      "workers": {
+        "app/(group)/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Catulv%5C%5COneDrive%5C%5CDocuments%5C%5CDesktop%5C%5Cnodejs%5C%5CE-commerce%20App%20Final%5C%5CE-commerce%20App%20Final%5C%5Csrc%5C%5Cactions%5C%5Cprodactions.ts%22%2C%5B%7B%22id%22%3A%2200eb1b0548e0832326cacd9e35dda88d84f348f83b%22%2C%22exportedName%22%3A%22logOutUser%22%7D%2C%7B%22id%22%3A%22402be72870fca04667f83b7cd30a854d471bad0995%22%2C%22exportedName%22%3A%22signUpUser%22%7D%2C%7B%22id%22%3A%22406c7af6262fd1018ceecff406cc9c1ac6906c068d%22%2C%22exportedName%22%3A%22signInUser%22%7D%2C%7B%22id%22%3A%22406e3f425378744a4f4262e87152aaa51ea13ddd0c%22%2C%22exportedName%22%3A%22addProductToCart%22%7D%2C%7B%22id%22%3A%22409215b7dcea4371660cc5bc9db24df6a0bc236651%22%2C%22exportedName%22%3A%22deleteProductFromCart%22%7D%2C%7B%22id%22%3A%2240af6b1ab52904262fd7a5524c9b694a6acdde502e%22%2C%22exportedName%22%3A%22deleteProductFromDb%22%7D%2C%7B%22id%22%3A%2240c90c16fd4099efd687e72111060b753ea900389e%22%2C%22exportedName%22%3A%22addProductToDb%22%7D%2C%7B%22id%22%3A%22601c57354ce2a1e226806d1d5f8aa2a2b89a05565c%22%2C%22exportedName%22%3A%22updateProductInDb%22%7D%2C%7B%22id%22%3A%22607d9b123d31cb159042fffc3319dace46e4201972%22%2C%22exportedName%22%3A%22updateQuantity%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/(group)/page": "action-browser"
+      }
+    },
+    "40c90c16fd4099efd687e72111060b753ea900389e": {
+      "workers": {
+        "app/(group)/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Catulv%5C%5COneDrive%5C%5CDocuments%5C%5CDesktop%5C%5Cnodejs%5C%5CE-commerce%20App%20Final%5C%5CE-commerce%20App%20Final%5C%5Csrc%5C%5Cactions%5C%5Cprodactions.ts%22%2C%5B%7B%22id%22%3A%2200eb1b0548e0832326cacd9e35dda88d84f348f83b%22%2C%22exportedName%22%3A%22logOutUser%22%7D%2C%7B%22id%22%3A%22402be72870fca04667f83b7cd30a854d471bad0995%22%2C%22exportedName%22%3A%22signUpUser%22%7D%2C%7B%22id%22%3A%22406c7af6262fd1018ceecff406cc9c1ac6906c068d%22%2C%22exportedName%22%3A%22signInUser%22%7D%2C%7B%22id%22%3A%22406e3f425378744a4f4262e87152aaa51ea13ddd0c%22%2C%22exportedName%22%3A%22addProductToCart%22%7D%2C%7B%22id%22%3A%22409215b7dcea4371660cc5bc9db24df6a0bc236651%22%2C%22exportedName%22%3A%22deleteProductFromCart%22%7D%2C%7B%22id%22%3A%2240af6b1ab52904262fd7a5524c9b694a6acdde502e%22%2C%22exportedName%22%3A%22deleteProductFromDb%22%7D%2C%7B%22id%22%3A%2240c90c16fd4099efd687e72111060b753ea900389e%22%2C%22exportedName%22%3A%22addProductToDb%22%7D%2C%7B%22id%22%3A%22601c57354ce2a1e226806d1d5f8aa2a2b89a05565c%22%2C%22exportedName%22%3A%22updateProductInDb%22%7D%2C%7B%22id%22%3A%22607d9b123d31cb159042fffc3319dace46e4201972%22%2C%22exportedName%22%3A%22updateQuantity%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/(group)/page": "action-browser"
+      }
+    },
+    "601c57354ce2a1e226806d1d5f8aa2a2b89a05565c": {
+      "workers": {
+        "app/(group)/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Catulv%5C%5COneDrive%5C%5CDocuments%5C%5CDesktop%5C%5Cnodejs%5C%5CE-commerce%20App%20Final%5C%5CE-commerce%20App%20Final%5C%5Csrc%5C%5Cactions%5C%5Cprodactions.ts%22%2C%5B%7B%22id%22%3A%2200eb1b0548e0832326cacd9e35dda88d84f348f83b%22%2C%22exportedName%22%3A%22logOutUser%22%7D%2C%7B%22id%22%3A%22402be72870fca04667f83b7cd30a854d471bad0995%22%2C%22exportedName%22%3A%22signUpUser%22%7D%2C%7B%22id%22%3A%22406c7af6262fd1018ceecff406cc9c1ac6906c068d%22%2C%22exportedName%22%3A%22signInUser%22%7D%2C%7B%22id%22%3A%22406e3f425378744a4f4262e87152aaa51ea13ddd0c%22%2C%22exportedName%22%3A%22addProductToCart%22%7D%2C%7B%22id%22%3A%22409215b7dcea4371660cc5bc9db24df6a0bc236651%22%2C%22exportedName%22%3A%22deleteProductFromCart%22%7D%2C%7B%22id%22%3A%2240af6b1ab52904262fd7a5524c9b694a6acdde502e%22%2C%22exportedName%22%3A%22deleteProductFromDb%22%7D%2C%7B%22id%22%3A%2240c90c16fd4099efd687e72111060b753ea900389e%22%2C%22exportedName%22%3A%22addProductToDb%22%7D%2C%7B%22id%22%3A%22601c57354ce2a1e226806d1d5f8aa2a2b89a05565c%22%2C%22exportedName%22%3A%22updateProductInDb%22%7D%2C%7B%22id%22%3A%22607d9b123d31cb159042fffc3319dace46e4201972%22%2C%22exportedName%22%3A%22updateQuantity%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/(group)/page": "action-browser"
+      }
+    },
+    "607d9b123d31cb159042fffc3319dace46e4201972": {
+      "workers": {
+        "app/(group)/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Catulv%5C%5COneDrive%5C%5CDocuments%5C%5CDesktop%5C%5Cnodejs%5C%5CE-commerce%20App%20Final%5C%5CE-commerce%20App%20Final%5C%5Csrc%5C%5Cactions%5C%5Cprodactions.ts%22%2C%5B%7B%22id%22%3A%2200eb1b0548e0832326cacd9e35dda88d84f348f83b%22%2C%22exportedName%22%3A%22logOutUser%22%7D%2C%7B%22id%22%3A%22402be72870fca04667f83b7cd30a854d471bad0995%22%2C%22exportedName%22%3A%22signUpUser%22%7D%2C%7B%22id%22%3A%22406c7af6262fd1018ceecff406cc9c1ac6906c068d%22%2C%22exportedName%22%3A%22signInUser%22%7D%2C%7B%22id%22%3A%22406e3f425378744a4f4262e87152aaa51ea13ddd0c%22%2C%22exportedName%22%3A%22addProductToCart%22%7D%2C%7B%22id%22%3A%22409215b7dcea4371660cc5bc9db24df6a0bc236651%22%2C%22exportedName%22%3A%22deleteProductFromCart%22%7D%2C%7B%22id%22%3A%2240af6b1ab52904262fd7a5524c9b694a6acdde502e%22%2C%22exportedName%22%3A%22deleteProductFromDb%22%7D%2C%7B%22id%22%3A%2240c90c16fd4099efd687e72111060b753ea900389e%22%2C%22exportedName%22%3A%22addProductToDb%22%7D%2C%7B%22id%22%3A%22601c57354ce2a1e226806d1d5f8aa2a2b89a05565c%22%2C%22exportedName%22%3A%22updateProductInDb%22%7D%2C%7B%22id%22%3A%22607d9b123d31cb159042fffc3319dace46e4201972%22%2C%22exportedName%22%3A%22updateQuantity%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/(group)/page": "action-browser"
+      }
+    }
+  },
+  "edge": {},
+  "encryptionKey": "Bhr0H473OYiBY3Keb5lmWNA/dXbNBmqFmMhNCzlJ1FA="
+}
