@@ -1,7 +1,7 @@
 //@ts-nocheck
 import { redirect } from 'next/navigation';
 import React from 'react'
-import { verifyToken } from '../jwt';
+import { verifyToken } from '@/services/jwt'; 
 import prismaClient from '@/services/prisma';
 
 export default async function page() {
