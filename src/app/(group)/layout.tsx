@@ -1,21 +1,17 @@
-//@ts-nocheck
+"use client"; 
+import "../globals.css";
+
 import { useState } from "react";
-import Header from "./component/Header";
 import CartContextProvider from "../components/cart-context";
-import prismaClient from "@/services/prisma";
-//@ts-ignore
-export default async function RootLayout({
+
+export default function GroupLayout({
   children,
-  modal,
 }: Readonly<{
   children: React.ReactNode;
-  mmodal: React.ReactNode;
-}>) {
-  const cartItem = await prismaClient.product.findMany();
-
+}>) {  
   return (
     <div>
-      <CartContextProvider initialCartItems={cartItem}>
+      <CartContextProvider initialCartItems={[]}>
         <div>{children}</div>
       </CartContextProvider>
     </div>

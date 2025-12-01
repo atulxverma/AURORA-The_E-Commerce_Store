@@ -1,237 +1,113 @@
-// //@ts-nocheck
-// "use client";
-
-// import * as Dialog from "@radix-ui/react-dialog";
-// import { useState } from "react";
-// import React from "react";
-// import { updateProductInDb } from "@/actions/prodactions";
-// import { useRouter } from "next/router";
-
-// export default function EditProdButton({ item ,handleUpdate}) {
-//   const [title, setTitle] = useState(item?.title || "");
-//   const [description, setDescription] = useState(item?.description || "");
-//   const [price, setPrice] = useState(item?.price?.toString() || "");
-//   const [category, setCategory] = useState(item?.category || "");
-//   const [image_url, setimage_url] = useState(item?.image_url || "");
-//   // const router = useRouter();
-
-//   async function handleSubmit() {
-//     const parsedPrice = parseFloat(price);
-
-//     const data = {
-//       title,
-//       description,
-//       price: parsedPrice,
-//       category,
-//       image_url: image_url,
-//     };
-
-//     handleUpdate(item.id , data)
-//     data.id = IdleDeadline;
-//     const res = await fetch("http://localhost:3000/api/products/update",{
-//       method : "POST",
-//       body : JSON.stringify ({
-//         ...data,
-//         id : item.id
-//       })
-//     })
-  
-//     // const res = await updateProductInDb(item.id, data);
-//     // if(res.success){
-//     //   alert("Product updated successfully");
-//     //   handleUpdate(item.id , data)
-//     // } else{
-//     //   console.log(res)
-//     //   alert("Wrong")
-//     // }
-//   }
-
-//   return (
-//     <Dialog.Root>
-//       <Dialog.Trigger asChild>
-//         <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-//           Edit Product
-//         </button>
-//       </Dialog.Trigger>
-
-//       <Dialog.Portal>
-//         <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-//         <Dialog.Content className="fixed top-1/2 left-1/2 max-w-md w-full bg-white p-6 rounded-lg shadow-lg transform -translate-x-1/2 -translate-y-1/2">
-//           <Dialog.Title className="text-lg font-bold mb-2">
-//             Edit Product
-//           </Dialog.Title>
-//           <Dialog.Description className="text-sm text-gray-600 mb-4">
-//             Update product details below.
-//           </Dialog.Description>
-
-//           <div className="flex flex-col gap-4">
-//             <label className="flex flex-col">
-//               <span className="text-sm font-medium mb-1">Title</span>
-//               <input
-//                 className="border border-gray-300 rounded px-3 py-2"
-//                 value={title}
-//                 onChange={(e) => setTitle(e.target.value)}
-//                 placeholder="Enter product title"
-//               />
-//             </label>
-
-//             <label className="flex flex-col">
-//               <span className="text-sm font-medium mb-1">Description</span>
-//               <input
-//                 className="border border-gray-300 rounded px-3 py-2"
-//                 value={description}
-//                 onChange={(e) => setDescription(e.target.value)}
-//                 placeholder="Enter product description"
-//               />
-//             </label>
-
-//             <label className="flex flex-col">
-//               <span className="text-sm font-medium mb-1">Price</span>
-//               <input
-//                 type="number"
-//                 className="border border-gray-300 rounded px-3 py-2"
-//                 value={price}
-//                 onChange={(e) => setPrice(e.target.value)}
-//                 placeholder="Enter price"
-//               />
-//             </label>
-
-//             <label className="flex flex-col">
-//               <span className="text-sm font-medium mb-1">Category</span>
-//               <input
-//                 className="border border-gray-300 rounded px-3 py-2"
-//                 value={category}
-//                 onChange={(e) => setCategory(e.target.value)}
-//                 placeholder="Enter category"
-//               />
-//             </label>
-
-//             <label className="flex flex-col">
-//               <span className="text-sm font-medium mb-1">Image URL</span>
-//               <input
-//                 className="border border-gray-300 rounded px-3 py-2"
-//                 value={image_url}
-//                 onChange={(e) => setimage_url(e.target.value)}
-//                 placeholder="Enter image URL"
-//               />
-//             </label>
-//           </div>
-
-//           <div className="flex justify-end gap-3 mt-6">
-//             <Dialog.Close asChild>
-//               <button className="px-4 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300">
-//                 Cancel
-//               </button>
-//             </Dialog.Close>
-//             <Dialog.Close asChild>
-//               <button
-//                 onClick={handleSubmit}
-//                 className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
-//               >
-//                 Save
-//               </button>
-//             </Dialog.Close>
-//           </div>
-//         </Dialog.Content>
-//       </Dialog.Portal>
-//     </Dialog.Root>
-//   );
-// }
-
-
-
-
-
 "use client";
-import React, { useState } from "react";
-import * as Dialog from "@radix-ui/react-dialog";
+import React, { useState, useRef, useTransition, useEffect } from "react";
+import { createPortal } from "react-dom"; // <--- IMPORT ADDED
+import { useRouter } from "next/navigation";
+import { FiEdit, FiX, FiTrash2 } from "react-icons/fi";
+import { AiOutlineCloudUpload } from "react-icons/ai";
+import { updateProductInDb } from "@/actions/prodactions";
 
-export default function EditProdButton({
-  product,
-  onUpdate,
-}: {
-  product: any;
-  onUpdate: (updatedItem: any) => void;
-}) {
+export default function EditProdButton({ product }: { product: any }) {
   const [open, setOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    title: product.title,
-    description: product.description,
-    price: product.price,
-    image_url: product.image_url || "",
-  });
+  const [mounted, setMounted] = useState(false);
+  
+  const [title, setTitle] = useState(product.title || "");
+  const [description, setDescription] = useState(product.description || "");
+  const [price, setPrice] = useState(product.price || "");
+  const [category, setCategory] = useState(product.category || "");
+  const [tags, setTags] = useState(product.tags?.join(", ") || "");
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const initialImages = [product.thumbnail, product.image_url, ...(product.images || [])]
+    .filter((img) => img && typeof img === 'string' && img.trim() !== "")
+    .filter((val, index, self) => self.indexOf(val) === index);
+
+  const [images, setImages] = useState<string[]>(initialImages);
+  const [isPending, startTransition] = useTransition();
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const urlInputRef = useRef<HTMLInputElement | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files; if (!files) return;
+    const newImgs: string[] = [];
+    for (const file of Array.from(files)) {
+      const reader = new FileReader();
+      const result = await new Promise<string>((resolve) => { reader.onload = () => resolve(reader.result as string); reader.readAsDataURL(file); });
+      if(result) newImgs.push(result);
+    }
+    setImages((prev) => [...prev, ...newImgs]);
   };
 
-  const handleSubmit = async () => {
-    await onUpdate(formData); // call parent update function
-    setOpen(false);
+  const handleAddUrl = () => {
+    const val = urlInputRef.current?.value.trim();
+    if (val) { setImages((prev) => [...prev, val]); urlInputRef.current!.value = ""; }
   };
+
+  const removeImage = (indexToRemove: number) => {
+    setImages((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleUpdate = () => {
+    const finalImages = images.filter(Boolean);
+    const mainImage = finalImages[0] || ""; 
+    const payload = { id: product.id, title, description, price: Number(price), category, tags: tags.split(",").map(t => t.trim()).filter(Boolean), image_url: mainImage, images: finalImages };
+
+    startTransition(async () => {
+      const res = await updateProductInDb(payload);
+      if (res.success) {
+        alert("Product Updated!"); setOpen(false);
+        if (typeof window !== "undefined") window.dispatchEvent(new Event("product-updated"));
+        router.refresh();
+      } else { alert(res.message || "Update Failed"); }
+    });
+  };
+
+  // --- PORTAL CONTENT ---
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
+
+      <div className="relative bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+        <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-white z-10">
+          <h2 className="text-2xl font-bold text-gray-900">Edit Product</h2>
+          <button onClick={() => setOpen(false)} className="p-2 hover:bg-gray-100 rounded-full"><FiX size={24} /></button>
+        </div>
+
+        <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="space-y-5">
+                <div className="space-y-1"><label className="text-xs font-bold text-gray-500 uppercase">Title</label><input value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-black outline-none" /></div>
+                <div className="space-y-1"><label className="text-xs font-bold text-gray-500 uppercase">Description</label><textarea value={description} onChange={e => setDescription(e.target.value)} rows={4} className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-black outline-none resize-none" /></div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div><label className="text-xs font-bold text-gray-500 uppercase">Price</label><input type="number" value={price} onChange={e => setPrice(Number(e.target.value))} className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-black outline-none" /></div>
+                    <div><label className="text-xs font-bold text-gray-500 uppercase">Category</label><input value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-black outline-none" /></div>
+                </div>
+                <div className="space-y-1"><label className="text-xs font-bold text-gray-500 uppercase">Tags</label><input value={tags} onChange={e => setTags(e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl outline-none" /></div>
+            </div>
+            <div className="space-y-5">
+                <label className="text-xs font-bold text-gray-500 uppercase">Manage Images</label>
+                <div onClick={() => fileRef.current?.click()} className="border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-50"><AiOutlineCloudUpload size={32} className="text-gray-400" /><span className="text-sm text-gray-600 mt-2">Upload New Images</span><input ref={fileRef} type="file" multiple accept="image/*" className="hidden" onChange={e => handleFiles(e.target.files)} /></div>
+                <div className="flex gap-2"><input ref={urlInputRef} className="flex-1 bg-gray-50 border border-gray-200 p-2 rounded-lg text-sm outline-none" placeholder="Add Image URL" /><button onClick={handleAddUrl} type="button" className="bg-black text-white px-4 rounded-lg text-sm">Add</button></div>
+                <div className="grid grid-cols-3 gap-3 max-h-60 overflow-y-auto p-1">{images.map((src, i) => (<div key={i} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200"><img src={src} className="w-full h-full object-cover" alt="img" /><button onClick={() => removeImage(i)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"><FiTrash2 size={12} /></button></div>))}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 z-10">
+          <button onClick={() => setOpen(false)} className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transition">Cancel</button>
+          <button onClick={handleUpdate} disabled={isPending} className="px-8 py-3 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 transition shadow-lg disabled:opacity-50">{isPending ? "Saving..." : "Update Product"}</button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Trigger asChild>
-        <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md transition">
-          Edit
-        </button>
-      </Dialog.Trigger>
-
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/30" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-xl w-96 shadow-lg">
-          <Dialog.Title className="text-lg font-bold mb-4">Edit Product</Dialog.Title>
-
-          <div className="flex flex-col gap-3">
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              placeholder="Title"
-              className="border px-3 py-2 rounded-md"
-            />
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Description"
-              className="border px-3 py-2 rounded-md"
-            />
-            <input
-              type="number"
-              name="price"
-              value={formData.price}
-              onChange={handleChange}
-              placeholder="Price"
-              className="border px-3 py-2 rounded-md"
-            />
-            <input
-              type="text"
-              name="image_url"
-              value={formData.image_url}
-              onChange={handleChange}
-              placeholder="Image URL"
-              className="border px-3 py-2 rounded-md"
-            />
-          </div>
-
-          <div className="mt-4 flex justify-end gap-2">
-            <Dialog.Close asChild>
-              <button className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded-md">
-                Cancel
-              </button>
-            </Dialog.Close>
-            <button
-              onClick={handleSubmit}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
-            >
-              Save
-            </button>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    <>
+      <button onClick={() => setOpen(true)} className="bg-white p-2 rounded-full text-blue-600 hover:bg-blue-600 hover:text-white transition shadow-md" title="Edit Product"><FiEdit size={18} /></button>
+      {open && mounted && createPortal(modalContent, document.body)}
+    </>
   );
 }

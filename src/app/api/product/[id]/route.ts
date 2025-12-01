@@ -1,55 +1,51 @@
-// import prismaClient from "@/services/prisma";
-// import { NextRequest, NextResponse } from "next/server";
-
-// export async function GET(req : NextRequest,{params} : {params :{id : string}}) {
-//     const id = params.id;
-
-//     if(!id){
-//         return NextResponse.json({
-//             sucess : false,
-//             message : "no id provided"
-//         })
-//     }
-//     const product = await prismaClient.product.findUnique({
-//         where : {
-//             id
-//         }
-        
-//     })
-//     return NextResponse.json({
-//         success : true,
-//         data : product
-//     })
-// }
-
-
-
-
-
-
-
-
-
 import prismaClient from "@/services/prisma";
 import { NextResponse } from "next/server";
 
-// GET single product
-export async function GET(req: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
-
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const product = await prismaClient.product.findUnique({
-      where: { id }, // UUID string
-    });
+    const { id } = await params; 
+
+    let product = null;
+    
+    // Check DB with Reviews Included
+    if (id.length === 24) {
+      product = await prismaClient.product.findUnique({
+        where: { id: id },
+        include: {
+            reviews: {
+                include: { user: { select: { name: true } } }, // Get Reviewer Name
+                orderBy: { createdAt: 'desc' }
+            }
+        }
+      });
+    }
+
+    // Fallback to DummyJSON
+    if (!product) {
+      const res = await fetch(`https://dummyjson.com/products/${id}`);
+      if (res.ok) {
+        product = await res.json();
+        // Dummy products won't have DB reviews, so add empty array
+        product.reviews = []; 
+      }
+    }
 
     if (!product) {
-      return NextResponse.json({ message: "Product not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Product not found" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({ success: true, product });
   } catch (err) {
-    console.error("GET Product Error:", err);
-    return NextResponse.json({ message: "Error fetching product" }, { status: 500 });
+    console.log(err);
+    return NextResponse.json(
+      { success: false, message: "Error fetching product" },
+      { status: 500 }
+    );
   }
 }
-

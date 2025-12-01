@@ -1,40 +1,53 @@
 "use client";
-import Link from "next/link";
-import React from "react";
+import React, { useTransition } from "react";
+import { addProductToCart } from "@/actions/prodactions";
+import { FiShoppingBag, FiLoader } from "react-icons/fi";
 
-//@ts-ignore
-export default function AddToCart({ item }) {
-  function handleAdd() {
-    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-    let updatedCart = [...cart, item];
-    localStorage.setItem("cart", JSON.stringify(updatedCart));
+export default function AddToCart({ item }: { item: any }) {
+  const [isPending, startTransition] = useTransition();
 
-      const existingItem = updatedCart.find(function(elem){
-      return (elem.id == item.id);
-    })
+  function handleAdd(e: React.MouseEvent) {
+    e.preventDefault(); // Link click hone se rokne ke liye (agar card ke andar hai)
+    e.stopPropagation();
 
-    if(existingItem){
-      existingItem.quantity =existingItem.quantity +1 ;
-    } else {
-      const itemToAdd = {
-        ...item,
-      quantity : 1
+    startTransition(async () => {
+      // Payload clean karke bhej rahe hain
+      const payload = {
+        id: item.id,
+        title: item.title,
+        price: item.price,
+        description: item.description,
+        category: item.category,
+        // Images logic handle kar rahe hain
+        thumbnail: item.thumbnail || item.image_url || item.images?.[0] || ""
+      };
+
+      const res = await addProductToCart(payload);
+      
+      if (res.success) {
+        // Optional: Toast notification laga sakte ho yahan
+        console.log("Added!");
+      } else {
+        alert("Error: " + res.message);
       }
-      updatedCart.push(itemToAdd);
-    }
-
-    localStorage.setItem("cart", JSON.stringify(updatedCart));
-
-    alert(`${item.title} added to cart!`);
+    });
   }
-  
 
   return (
     <button
       onClick={handleAdd}
-      className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md transition"
+      disabled={isPending}
+      className="w-full flex items-center justify-center gap-2 bg-black text-white dark:bg-white dark:text-black font-medium py-3 rounded-xl hover:opacity-80 transition active:scale-95 disabled:opacity-60"
     >
-      Review Product
+      {isPending ? (
+        <>
+          <FiLoader className="animate-spin" /> Adding...
+        </>
+      ) : (
+        <>
+          <FiShoppingBag /> Add to Cart
+        </>
+      )}
     </button>
   );
 }

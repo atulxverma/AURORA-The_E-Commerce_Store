@@ -2,113 +2,168 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { FiArrowRight, FiLoader } from "react-icons/fi";
 
 export default function SignupPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [agree, setAgree] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    username: "",
+    email: "",
+    password: "",
+  });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-
-    if (!agree) {
-      setError("You must agree to the terms and conditions");
-      return;
-    }
+    setLoading(true);
 
     try {
       const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, username, email, password }),
+        body: JSON.stringify(formData),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
         setError(data.error || "Signup failed");
+        setLoading(false);
         return;
       }
 
+      // Redirect to login
       router.push("/login");
     } catch (err) {
-      console.error(err);
       setError("Something went wrong");
+      setLoading(false);
     }
   }
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-6 rounded shadow-md w-full max-w-md"
-      >
-        <h1 className="text-2xl font-bold mb-4">Create account</h1>
-        {error && <p className="text-red-500 mb-2">{error}</p>}
-
-        <input
-          type="text"
-          placeholder="Full Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full px-3 py-2 border rounded mb-4"
-          required
+    <div className="min-h-screen flex bg-white">
+      {/* RIGHT SIDE - IMAGE (Order changed for variety, or keep consistent) */}
+      <div className="hidden lg:block w-1/2 bg-gray-900 relative overflow-hidden">
+        <img
+          src="https://images.unsplash.com/photo-1469334031218-e382a71b716b?q=80&w=2070&auto=format&fit=crop"
+          alt="Fashion"
+          className="absolute inset-0 w-full h-full object-cover opacity-80"
         />
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="w-full px-3 py-2 border rounded mb-4"
-          required
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full px-3 py-2 border rounded mb-4"
-          required
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full px-3 py-2 border rounded mb-4"
-          minLength={6}
-          required
-        />
-
-        <div className="flex items-center mb-4">
-          <input
-            type="checkbox"
-            checked={agree}
-            onChange={(e) => setAgree(e.target.checked)}
-            className="mr-2"
-          />
-          <label>I agree to the terms and conditions</label>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-16">
+          <div className="text-white">
+            <h3 className="text-4xl font-bold mb-4">Join the revolution.</h3>
+            <p className="text-lg text-gray-300 max-w-md">
+              Create an account today and get exclusive access to new drops and sales.
+            </p>
+          </div>
         </div>
+      </div>
 
-        <button
-          type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Create Account
-        </button>
+      {/* LEFT SIDE - FORM */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 md:p-16">
+        <div className="w-full max-w-md space-y-6">
+          
+          <div>
+            <Link href="/" className="text-2xl font-black tracking-tighter uppercase">
+              AURORA<span className="text-blue-600">.</span>
+            </Link>
+            <h2 className="mt-8 text-3xl font-bold tracking-tight text-gray-900">
+              Create an account
+            </h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Enter your details below to create your account.
+            </p>
+          </div>
 
-        <p className="text-sm mt-4 text-center">
-          Already have an account?{" "}
-          <Link href="/login" className="text-blue-600 hover:underline">
-            Sign in
-          </Link>
-        </p>
-      </form>
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          <form className="space-y-4" onSubmit={handleSignup}>
+            {/* Full Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+              <input
+                type="text"
+                required
+                className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-black focus:bg-white focus:ring-0 transition-all outline-none"
+                placeholder="John Doe"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+            </div>
+
+            {/* Username */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+              <input
+                type="text"
+                required
+                className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-black focus:bg-white focus:ring-0 transition-all outline-none"
+                placeholder="johndoe123"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+              />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                type="email"
+                required
+                className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-black focus:bg-white focus:ring-0 transition-all outline-none"
+                placeholder="name@company.com"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <input
+                type="password"
+                required
+                className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-black focus:bg-white focus:ring-0 transition-all outline-none"
+                placeholder="••••••••"
+                minLength={6}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              />
+              <p className="text-xs text-gray-500 mt-1">Must be at least 6 characters</p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 bg-black text-white py-3.5 rounded-xl font-bold hover:bg-gray-900 transition-all disabled:opacity-70 shadow-lg hover:shadow-xl mt-4"
+            >
+              {loading ? (
+                <>
+                  <FiLoader className="animate-spin" /> Creating Account...
+                </>
+              ) : (
+                <>
+                  Create Account <FiArrowRight />
+                </>
+              )}
+            </button>
+          </form>
+
+          <p className="text-center text-sm text-gray-500">
+            Already have an account?{" "}
+            <Link href="/login" className="font-semibold text-black hover:underline">
+              Log in
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

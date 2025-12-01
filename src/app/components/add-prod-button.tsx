@@ -1,155 +1,130 @@
-'use client';
+"use client";
+import React, { useState, useRef, useTransition, useEffect } from "react";
+import { createPortal } from "react-dom"; 
+import { useRouter } from "next/navigation";
+import { AiOutlinePlus, AiOutlineCloudUpload } from "react-icons/ai";
+import { FiX, FiTrash2 } from "react-icons/fi";
+import { addNewProduct } from "@/actions/prodactions";
 
-import * as Dialog from '@radix-ui/react-dialog';
-import { useState, useTransition } from 'react';
-import React from 'react';
-import { useRouter } from 'next/navigation';
-import { addProductToDb } from '@/actions/prodactions';
+export default function AddProdButton({ onProductAdded }: { onProductAdded?: (item: any) => void }) {
+  const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-export default function AddProdButton() {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
-  const [category, setCategory] = useState('');
-  const [image_url, setimage_url] = useState('');
+  // Form Data
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState<number | "">("");
+  const [category, setCategory] = useState("");
+  const [tags, setTags] = useState("");
+  const [addedImages, setAddedImages] = useState<string[]>([]); 
+  
   const [isPending, startTransition] = useTransition();
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const urlInputRef = useRef<HTMLInputElement | null>(null);
   const router = useRouter();
+  const defaultCategories = ["Clothing", "Shoes", "Accessories", "Electronics"];
 
-  // ✅ async lagao yaha
-  async function handleSubmit() {
-    const data = {
-      title,
-      description,
-      price: parseFloat(price),
-      category,
-      image_url: image_url,
-    };
-    const res = await addProductToDb(data);
+  useEffect(() => setMounted(true), []);
 
-    try {
-      const res = await fetch("http://localhost:3000/api/product", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json", // ✅ important
-        },
-        body: JSON.stringify(data),
-      });
-
-      const x = await res.json();
-
-      if (x.success) {
-        alert("Product added successfully!");
-        // reset form
-        setTitle('');
-        setDescription('');
-        setPrice('');
-        setCategory('');
-        setimage_url('');
-        router.refresh(); // ✅ page refresh karega
-      } else {
-        alert(x.message || "Something went wrong");
-      }
-    } catch (error) {
-      console.error("Error while adding product:", error);
-      alert("Failed to add product");
+  const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files; if (!files) return;
+    const newImages: string[] = [];
+    for (const file of Array.from(files)) {
+      const reader = new FileReader();
+      const result = await new Promise<string>((resolve) => { reader.onload = () => resolve(reader.result as string); reader.readAsDataURL(file); });
+      if(result) newImages.push(result);
     }
-  }
+    setAddedImages((prev) => [...prev, ...newImages]);
+  };
+
+  const handleAddUrl = (e: React.MouseEvent) => {
+    e.preventDefault(); 
+    const val = urlInputRef.current?.value.trim();
+    if (val) { setAddedImages((prev) => [...prev, val]); urlInputRef.current!.value = ""; }
+  };
+
+  const handleSubmit = () => {
+    let finalImages = [...addedImages];
+    const pendingUrl = urlInputRef.current?.value.trim();
+    if (pendingUrl) finalImages.push(pendingUrl);
+    finalImages = finalImages.filter(img => img && img.trim() !== "");
+
+    if (!title || !price || finalImages.length === 0) return alert("Please enter Title, Price and at least 1 Image.");
+
+    const formData = new FormData();
+    formData.append("title", title); formData.append("description", description);
+    formData.append("price", String(price)); formData.append("category", category || "General"); formData.append("image", finalImages[0]); 
+
+    startTransition(async () => {
+      const res = await addNewProduct(formData);
+      
+      if (res.success && res.newProduct) {
+        alert("Product Added Successfully!");
+        setOpen(false);
+        
+        // --- 1. Direct Parent Update (For Profile Page) ---
+        if (onProductAdded) {
+            onProductAdded(res.newProduct);
+        }
+
+        // --- 2. GLOBAL EVENT UPDATE (For Home Page) ---
+        if (typeof window !== "undefined") {
+            // Hum naya product data event ke saath bhej rahe hain
+            const event = new CustomEvent("product-added-optimistic", { 
+                detail: res.newProduct 
+            });
+            window.dispatchEvent(event);
+        }
+
+        setTitle(""); setDescription(""); setPrice(""); setCategory(""); setTags(""); setAddedImages([]);
+        if(urlInputRef.current) urlInputRef.current.value = "";
+        
+        router.refresh();
+      } else {
+        alert(res.message || "Failed to add product");
+      }
+    });
+  };
+
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
+      <div className="relative bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+        <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-white z-10">
+          <h2 className="text-2xl font-bold text-gray-900">Add Product</h2>
+          <button onClick={() => setOpen(false)} className="p-2 hover:bg-gray-100 rounded-full"><FiX size={24} /></button>
+        </div>
+        <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+             <div className="space-y-5">
+               <div className="space-y-1"><label className="text-xs font-bold uppercase text-gray-500">Title</label><input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl outline-none" /></div>
+               <div className="space-y-1"><label className="text-xs font-bold uppercase text-gray-500">Description</label><textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl outline-none resize-none" /></div>
+               <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-1"><label className="text-xs font-bold uppercase text-gray-500">Price</label><input type="number" value={price} onChange={(e) => setPrice(Number(e.target.value))} className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl outline-none" /></div>
+                 <div className="space-y-1"><label className="text-xs font-bold uppercase text-gray-500">Category</label><select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl outline-none"><option value="">Select...</option>{defaultCategories.map(c => <option key={c} value={c}>{c}</option>)}<option value="Other">Other</option></select></div>
+               </div>
+               <div className="space-y-1"><label className="text-xs font-bold text-gray-500 uppercase">Tags</label><input value={tags} onChange={e => setTags(e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl outline-none" /></div>
+             </div>
+             <div className="space-y-5">
+                <label className="text-xs font-bold uppercase text-gray-500">Product Images</label>
+                <div onClick={() => fileRef.current?.click()} className="border-2 border-dashed border-gray-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-50"><AiOutlineCloudUpload size={40} className="text-gray-400 mb-2" /><p className="font-medium text-gray-600">Click to Upload</p><input ref={fileRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFiles} /></div>
+                <div className="flex gap-2"><input ref={urlInputRef} className="flex-1 bg-gray-50 border border-gray-200 p-2 rounded-lg text-sm outline-none" placeholder="Paste Image URL" /><button type="button" onClick={handleAddUrl} className="bg-black text-white px-4 rounded-lg text-sm font-medium">Add</button></div>
+                <div className="grid grid-cols-3 gap-3 max-h-60 overflow-y-auto p-1">{addedImages.map((src, i) => (<div key={i} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200"><img src={src} className="w-full h-full object-cover" alt="preview" /><button onClick={() => setAddedImages(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"><FiTrash2 size={12} /></button></div>))}</div>
+             </div>
+           </div>
+        </div>
+        <div className="p-6 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 z-10">
+          <button onClick={() => setOpen(false)} className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transition">Cancel</button>
+          <button onClick={handleSubmit} disabled={isPending} className="px-8 py-3 rounded-xl font-bold bg-black text-white hover:bg-gray-800 transition shadow-lg disabled:opacity-50">{isPending ? "Publishing..." : "Publish Product"}</button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <Dialog.Root>
-      <Dialog.Trigger asChild>
-        <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-          Add Product
-        </button>
-      </Dialog.Trigger>
-
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-
-        <Dialog.Content className="fixed top-1/2 left-1/2 max-w-md w-full bg-white p-6 rounded-lg shadow-lg transform -translate-x-1/2 -translate-y-1/2">
-          <Dialog.Title className="text-lg font-bold mb-2">Add Product</Dialog.Title>
-          <Dialog.Description className="text-sm text-gray-600 mb-4">
-            Fill in the product details.
-          </Dialog.Description>
-
-          <div className="flex flex-col gap-4">
-            <label className="flex flex-col">
-              <span className="text-sm font-medium mb-1">Title</span>
-              <input
-                className="border border-gray-300 rounded px-3 py-2"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter product title"
-              />
-            </label>
-
-            <label className="flex flex-col">
-              <span className="text-sm font-medium mb-1">Description</span>
-              <input
-                className="border border-gray-300 rounded px-3 py-2"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Enter product description"
-              />
-            </label>
-
-            <label className="flex flex-col">
-              <span className="text-sm font-medium mb-1">Price</span>
-              <input
-                type="number"
-                className="border border-gray-300 rounded px-3 py-2"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="Enter price"
-              />
-            </label>
-
-            <label className="flex flex-col">
-              <span className="text-sm font-medium mb-1">Category</span>
-              <input
-                className="border border-gray-300 rounded px-3 py-2"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                placeholder="Enter category"
-              />
-            </label>
-
-            <label className="flex flex-col">
-              <span className="text-sm font-medium mb-1">Image URL</span>
-              <input
-                className="border border-gray-300 rounded px-3 py-2"
-                value={image_url}
-                onChange={(e) => setimage_url(e.target.value)}
-                placeholder="Enter image URL"
-              />
-            </label>
-          </div>
-
-          <div className="flex justify-end gap-3 mt-6">
-            <Dialog.Close asChild>
-              <button className="px-4 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300">
-                Cancel
-              </button>
-            </Dialog.Close>
-            <Dialog.Close asChild>
-              <button
-                onClick={handleSubmit}
-                disabled={isPending}
-                className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400"
-              >
-                {isPending ? 'Saving...' : 'Save'}
-              </button>
-            </Dialog.Close>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    <>
+      <button onClick={() => setOpen(true)} className="flex items-center justify-center bg-black text-white w-10 h-10 rounded-full hover:scale-110 transition shadow-lg"><AiOutlinePlus size={20} /></button>
+      {open && mounted && createPortal(modalContent, document.body)}
+    </>
   );
 }
-
-
-
-
-
-
-

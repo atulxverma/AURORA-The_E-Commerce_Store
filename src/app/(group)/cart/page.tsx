@@ -1,287 +1,79 @@
-// //@ts-nocheck
-// "use client";
-
-// import React, { useContext, useEffect, useState } from "react";
-// import Header from "@/app/components/Header";
-// import Link from "next/link";
-// import { NewCartContext } from "@/app/components/cart-context";
-
-// interface ProductItem {
-//   id: number;
-//   title: string;
-//   description: string;
-//   price: number;
-//   thumbnail: string;
-//   rating: number;
-// }
-
-// export default function CartPage() {
-//   const {cart , setCart} = useContext(NewCartContext);
-//   // const [cartItems, setCartItems] = useState<ProductItem[]>([]);
-
-//   // useEffect(() => {
-//   //   loadCart();
-//   // }, []);
-
-//   // const loadCart = () => {
-//   //   try {
-//   //     const items = localStorage.getItem("cart");
-//   //     const parsed = items ? JSON.parse(items) : [];
-
-//   //     const validItems = Array.isArray(parsed)
-//   //       ? parsed.filter((item) => item && item.id && item.title)
-//   //       : [];
-
-//   //     setCartItems(validItems);
-//   //     setCart(validItems);
-//   //   } catch (err) {
-//   //     console.error("Error reading cart:", err);
-//   //     setCartItems([]);
-//   //     setCart([]);
-//   //   }
-//   // };
-
-//   const handleRemove = (id: number) => {
-//     // const updatedItems = cartItems.filter((item) => item.id !== id);
-//     const updatedItems = cart.filter((item) => item.id !== id);
-//     // setCartItems(updatedItems);
-//     setCart(updatedItems);
-//     localStorage.setItem("cart", JSON.stringify(updatedItems));
-//   };
-
-//   const clearCart = () => {
-//     localStorage.removeItem("cart");
-//     setCart([]);
-//   };
-
-//   const renderStars = (rating: number) => {
-//     const full = Math.floor(rating);
-//     const half = rating % 1 >= 0.5;
-//     const empty = 5 - full - (half ? 1 : 0);
-
-//     const stars = [];
-//     for (let i = 0; i < full; i++) stars.push(<span key={`f-${i}`}>⭐</span>);
-//     if (half) stars.push(<span key="half">⭐️</span>);
-//     for (let i = 0; i < empty; i++)
-//       stars.push(
-//         <span key={`e-${i}`} className="opacity-30">
-//           ⭐
-//         </span>
-//       );
-//     return stars;
-//   };
-
-//   const calculateTotal = () => {
-//     // return cartItems.reduce(
-//       return cart.reduce(
-//       (total, item) => total + Math.ceil(item.price * 80),
-//       0
-//     );
-//   };
-
-//   return (
-//     <div>
-//       <Header />
-//       <div className="p-6">
-//         <h1 className="text-2xl font-bold mb-4">Your Cart</h1>
-
-//         {cart.length === 0 ? (
-//           <p className="text-gray-500">Cart is empty.</p>
-//         ) : (
-//           <>
-//             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-//               {cart.map((item) => (
-//                 <div
-//                   key={item.id}
-//                   className="border rounded-lg p-4 shadow hover:shadow-md transition bg-white"
-//                 >
-//                   <img
-//                     src={item.thumbnail}
-//                     alt={item.title}
-//                     className="h-[250px] w-full object-cover rounded"
-//                   />
-//                   <h2 className="text-lg font-semibold mt-2">{item.title}</h2>
-//                   <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-//                     {item.description}
-//                   </p>
-
-//                   <div className="mt-2 text-yellow-500 text-sm">
-//                     {renderStars(item.rating)}
-//                     <span className="ml-1 text-gray-500 text-xs">
-//                       ({item.rating})
-//                     </span>
-//                   </div>
-
-//                   <div className="mt-4 flex justify-between items-center">
-//                     <span className="text-xl font-bold text-blue-600">
-//                       ₹{Math.ceil(item.price * 80)}
-//                     </span>
-//                     <Link
-//                       href={`/product/${item.id}`}
-//                       className="text-sm text-blue-500 hover:underline"
-//                     >
-//                       View
-//                     </Link>
-//                   </div>
-
-//                   <button
-//                     onClick={() => handleRemove(item.id)}
-//                     className="mt-3 w-full bg-red-500 hover:bg-red-600 text-white text-sm py-2 rounded-md transition"
-//                   >
-//                     Remove
-//                   </button>
-//                 </div>
-//               ))}
-//             </div>
-
-//             <div className="mt-10 text-right">
-//               <p className="text-xl font-semibold">
-//                 Total: ₹{calculateTotal()}
-//               </p>
-//               <button
-//                 onClick={clearCart}
-//                 className="mt-3 bg-black text-white px-6 py-2 rounded hover:bg-gray-800"
-//               >
-//                 Clear Cart
-//               </button>
-//             </div>
-//           </>
-//         )}
-//       </div>
-//     </div>
-//   );
-// }
-
-
-
-
-
-
-
-
-
-
-//@ts-nocheck
-"use client";
-
-import React, { useContext, useEffect, useState } from "react";
-import Header from "@/app/components/Header";
-import { NewCartContext } from "@/app/components/cart-context";
+import React from "react";
+import Header from "../../components/Header";
+import prismaClient from "@/services/prisma";
+import { getCurrentUser } from "@/lib/auth";
+import CartClient from "./CartClient"; 
 import Link from "next/link";
-import Image from "next/image";
+import FadeIn from "../../components/FadeIn";
+import { FiShoppingBag, FiUser, FiGrid } from "react-icons/fi";
 
-export default function CartPage() {
-  const { cart, setCart } = useContext(NewCartContext);
-  const [hydrated, setHydrated] = useState(false);
+export const dynamic = "force-dynamic";
 
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
+export default async function CartPage() {
+  const user = await getCurrentUser();
 
-  if (!hydrated) return null;
-
-  const handleRemove = (id: number) => {
-    const updatedCart = cart.filter((item) => item.id !== id);
-    setCart(updatedCart);
-    localStorage.setItem("cart", JSON.stringify(updatedCart));
-  };
-
-  const clearCart = () => {
-    setCart([]);
-    localStorage.removeItem("cart");
-  };
-
-  const renderStars = (rating: number) => {
-    const full = Math.floor(rating);
-    const half = rating % 1 >= 0.5;
-    const empty = 5 - full - (half ? 1 : 0);
-
-    const stars = [];
-    for (let i = 0; i < full; i++) stars.push(<span key={`f-${i}`}>⭐</span>);
-    if (half) stars.push(<span key="half">⭐</span>);
-    for (let i = 0; i < empty; i++)
-      stars.push(
-        <span key={`e-${i}`} className="opacity-30">
-          ⭐
-        </span>
-      );
-    return stars;
-  };
-
-  const calculateTotal = () =>
-    cart.reduce((total, item) => total + Math.ceil(item.price * 80), 0);
-
-  return (
-    <div className="bg-gray-50 min-h-screen">
-      <Header />
-      <div className="p-6 max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Your Cart</h1>
-
-        {cart.length === 0 ? (
-          <p className="text-gray-500 text-lg">Cart is empty.</p>
-        ) : (
-          <>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {cart.map((item) => (
-                <div
-                  key={item.id}
-                  className="border rounded-lg p-4 shadow hover:shadow-md transition bg-white"
-                >
-                  <Image
-                    src={item.thumbnail || item.image_url}
-                    alt={item.title}
-                    width={300}
-                    height={250}
-                    className="rounded object-cover w-full h-64"
-                  />
-
-                  <h2 className="text-lg font-semibold mt-2">{item.title}</h2>
-                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                    {item.description}
-                  </p>
-
-                  <div className="mt-2 text-yellow-500 text-sm">
-                    {renderStars(item.rating)}
-                    <span className="ml-1 text-gray-500 text-xs">
-                      ({item.rating})
-                    </span>
-                  </div>
-
-                  <div className="mt-4 flex justify-between items-center">
-                    <span className="text-xl font-bold text-blue-600">
-                      ₹{Math.ceil(item.price * 80)}
-                    </span>
-                    <Link
-                      href={`/product/${item.id}`}
-                      className="text-sm text-blue-500 hover:underline"
-                    >
-                      View
+  // --- 1. NO USER UI ---
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header user={null} />
+        <div className="max-w-4xl mx-auto px-6 pt-40 text-center">
+            <FadeIn>
+                <div className="bg-white p-16 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col items-center">
+                    <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6 text-gray-400">
+                        <FiShoppingBag size={40} />
+                    </div>
+                    <h1 className="text-3xl font-black text-gray-900 mb-2">Your Cart is Waiting</h1>
+                    <p className="text-gray-500 mb-8 max-w-md">Login to complete your purchase securely.</p>
+                    <Link href="/login" className="bg-black text-white px-10 py-4 rounded-2xl font-bold text-lg hover:scale-105 transition shadow-xl flex items-center gap-3 cursor-pointer">
+                        <FiUser /> Login to View
                     </Link>
-                  </div>
-
-                  <button
-                    onClick={() => handleRemove(item.id)}
-                    className="mt-3 w-full bg-red-500 hover:bg-red-600 text-white text-sm py-2 rounded-md transition"
-                  >
-                    Remove
-                  </button>
                 </div>
-              ))}
-            </div>
+            </FadeIn>
+        </div>
+      </div>
+    );
+  }
 
-            <div className="mt-10 text-right">
-              <p className="text-2xl font-semibold">
-                Total: ₹{calculateTotal()}
-              </p>
-              <button
-                onClick={clearCart}
-                className="mt-3 bg-black text-white px-6 py-2 rounded hover:bg-gray-800 transition"
-              >
-                Clear Cart
-              </button>
+  // --- FETCH CART ---
+  const cartItems = await prismaClient.cart.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" }
+  });
+
+  // --- 2. EMPTY CART UI (NO HEADER) ---
+  if (cartItems.length === 0) {
+    return (
+        <div className="min-h-screen bg-gray-50">
+            <Header user={user} />
+            <div className="max-w-4xl mx-auto px-6 pt-40 text-center">
+                <FadeIn>
+                    <div className="bg-white p-24 rounded-[3rem] shadow-sm border border-gray-100 flex flex-col items-center">
+                        <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6 text-gray-400">
+                            <FiShoppingBag size={40} />
+                        </div>
+                        <h1 className="text-3xl font-black text-gray-900 mb-2">Your Cart is Empty</h1>
+                        <p className="text-gray-500 mb-8 max-w-sm font-medium">Looks like you haven't added anything yet.</p>
+                        <Link href="/" className="flex items-center gap-3 bg-black text-white px-10 py-4 rounded-2xl font-bold text-lg hover:scale-105 transition shadow-xl cursor-pointer">
+                            <FiGrid /> Start Shopping
+                        </Link>
+                    </div>
+                </FadeIn>
             </div>
-          </>
-        )}
+        </div>
+    );
+  }
+
+  // --- 3. FILLED CART UI (WITH HEADER) ---
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header user={user} />
+      <div className="max-w-6xl mx-auto px-6 pt-32 pb-20">
+        {/* Header sirf tab dikhega jab items honge */}
+        <FadeIn>
+            <h1 className="text-4xl font-black text-gray-900 mb-8 uppercase tracking-tighter">My Shopping Bag</h1>
+        </FadeIn>
+        <CartClient initialCart={cartItems} />
       </div>
     </div>
   );

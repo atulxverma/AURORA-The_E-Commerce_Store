@@ -1,5 +1,10 @@
 {
-  "/favicon.ico/route": "app/favicon.ico/route.js",
   "/api/product/route": "app/api/product/route.js",
-  "/(group)/page": "app/(group)/page.js"
+  "/api/me/route": "app/api/me/route.js",
+  "/profile/page": "app/profile/page.js",
+  "/wishlist/page": "app/wishlist/page.js",
+  "/search/page": "app/search/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/(group)/page": "app/(group)/page.js",
+  "/(group)/cart/page": "app/(group)/cart/page.js"
 }

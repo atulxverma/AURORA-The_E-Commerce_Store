@@ -1,12 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -14,44 +7,102 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Product {
-  id          String @id @default(auto()) @map("_id") @db.ObjectId
-  title       String
-  description String
-  price       Float?
-  image_url   String
-  category    String
-}
-
-model user {
-  id       String @id @default(auto()) @map("_id") @db.ObjectId
-  username String @unique
-  email    String @unique
+model User {
+  id       String    @id @default(auto()) @map("_id") @db.ObjectId
+  username String    @unique
+  email    String    @unique
   password String
   name     String
+  
+  image    String?
+  address  String?
+  city     String?
+  zipCode  String?
+
+  products Product[]
+  reviews  Review[]  // <--- NEW
 }
 
-model Products {
-  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
-  title              String
-  description        String
-  brand              String?
-  category           String
-  price              Float
-  originalPrice      Float
-  discountPercentage Float
-  rating             Float
-  availabilityStatus String
-  tags               String[]
-  thumbnail          String
-}
-
-model Cart {
-  id          String @id @default(auto()) @map("_id") @db.ObjectId
+model Product {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
   title       String
   description String
-  price       Float?
-  image_url   String
+  price       Float
   category    String
-  quantity    Int @default(1)
+  thumbnail   String?
+  images      String[] @default([])
+  tags        String[] @default([])
+  
+  ownerId     String?  @db.ObjectId
+  owner       User?    @relation(fields: [ownerId], references: [id])
+  
+  reviews     Review[] // <--- NEW
+  
+  createdAt   DateTime? @default(now())
+}
+
+// --- NEW MODEL ---
+model Review {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  rating    Int
+  comment   String
+  
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  
+  productId String   @db.ObjectId
+  product   Product  @relation(fields: [productId], references: [id])
+  
+  createdAt DateTime @default(now())
+}
+
+// ... (Keep Cart, Order, OrderItem, Wishlist exactly as they are) ...
+model Cart {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String    @db.ObjectId
+  productId   String    
+  quantity    Int       @default(1)
+  title       String
+  description String?
+  price       Float
+  image_url   String?
+  category    String?
+  createdAt   DateTime? @default(now())
+  @@unique([userId, productId])
+}
+
+model Order {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String      @db.ObjectId
+  fullName    String
+  address     String
+  city        String
+  zipCode     String
+  country     String
+  totalAmount Float
+  status      String      @default("Pending")
+  items       OrderItem[]
+  createdAt   DateTime    @default(now())
+}
+
+model OrderItem {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  orderId     String   @db.ObjectId
+  order       Order    @relation(fields: [orderId], references: [id])
+  productId   String   
+  title       String
+  price       Float
+  quantity    Int
+  image_url   String?
+}
+
+model Wishlist {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  productId   String   
+  title       String
+  price       Float
+  image_url   String
+  createdAt   DateTime @default(now())
+  @@unique([userId, productId])
 }
