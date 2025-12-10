@@ -1,12 +1,13 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { createPortal } from "react-dom"; // <--- IMPORT
+import { createPortal } from "react-dom"; 
 import { useSearchParams } from "next/navigation";
 import Header from "../components/Header";
 import ItemCard from "../components/Item-card";
 import FadeIn from "../components/FadeIn";
 import WishlistButton from "../components/wishlist-button";
 import { FiSliders, FiSearch, FiChevronDown, FiX } from "react-icons/fi";
+import { getWishlist } from "@/actions/prodactions"; // Import Action
 
 export default function SearchPage() {
     const searchParams = useSearchParams();
@@ -17,7 +18,7 @@ export default function SearchPage() {
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [showMobileFilters, setShowMobileFilters] = useState(false);
-    const [mounted, setMounted] = useState(false); // For Portal
+    const [mounted, setMounted] = useState(false); 
 
     // Filters
     const [minPrice, setMinPrice] = useState("");
@@ -32,21 +33,41 @@ export default function SearchPage() {
         setMounted(true);
     }, []);
 
-    // 1. Fetch Data
+    // 1. Fetch Data (Fixed to include Wishlist Status)
     useEffect(() => {
         async function fetchData() {
             try {
                 setLoading(true);
-                const res = await fetch(`/api/search?q=${query}`);
-                const data = await res.json();
-                setAllProducts(data.products || []);
-                setFilteredProducts(data.products || []);
+                // Parallel Fetch
+                const [res, userRes] = await Promise.all([
+                    fetch(`/api/search?q=${query}`),
+                    fetch("/api/me")
+                ]);
 
-                const userRes = await fetch("/api/me");
+                const data = await res.json();
+                let activeUser = null;
+
                 if (userRes.ok) {
                     const uData = await userRes.json();
-                    setCurrentUser(uData.user);
+                    activeUser = uData.user;
+                    setCurrentUser(activeUser);
                 }
+
+                let products = data.products || [];
+
+                // --- CHECK WISHLIST STATUS ---
+                if (activeUser) {
+                    const wishlistItems = await getWishlist();
+                    const likedIds = new Set(wishlistItems.map((w: any) => w.productId));
+                    products = products.map((p: any) => ({
+                        ...p,
+                        isLiked: likedIds.has(p.id)
+                    }));
+                }
+
+                setAllProducts(products);
+                setFilteredProducts(products);
+
             } catch (err) { console.error(err); } finally { setLoading(false); }
         }
         if (query) fetchData();
@@ -63,10 +84,12 @@ export default function SearchPage() {
         setFilteredProducts(result);
     }, [minPrice, maxPrice, selectedCategory, sortOrder, allProducts]);
 
+    // --- 3. SYNC WITH HOME PAGE (New Logic) ---
     useEffect(() => {
         const handleWishlistSync = (e: any) => {
             const { id, status } = e.detail;
 
+            // Update both lists locally
             const updateList = (list: any[]) => list.map(p =>
                 p.id === id ? { ...p, isLiked: status } : p
             );
@@ -196,7 +219,14 @@ export default function SearchPage() {
                                         return (
                                             <FadeIn key={item.id} delay={index * 0.05}>
                                                 <div className="relative group h-full">
-                                                    {!isOwner && (<div className="absolute top-2 right-2 z-30 transform transition group-hover:scale-110"><WishlistButton product={item} initialLiked={item.isLiked || false} /></div>)}
+                                                    {!isOwner && (
+                                                        <div className="absolute top-2 right-2 z-30 transform transition group-hover:scale-110">
+                                                            <WishlistButton 
+                                                                product={item} 
+                                                                initialLiked={item.isLiked || false} // PASSED CORRECTLY
+                                                            />
+                                                        </div>
+                                                    )}
                                                     <ItemCard item={item} />
                                                 </div>
                                             </FadeIn>
