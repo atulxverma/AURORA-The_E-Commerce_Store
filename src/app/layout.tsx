@@ -1,38 +1,40 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { Theme } from "@radix-ui/themes";
+import Header from "./components/Header"; 
+import { getCurrentUser } from "@/lib/auth"; 
+import { BackgroundBeams } from "./components/ui/background-beams"; // <--- IMPORT
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "E-Commerce App",
-  description: "Next.js + Prisma E-commerce Website",
+  title: "Aurora Store",
+  description: "Premium E-commerce Store",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
+  
+  const user = await getCurrentUser(); 
+
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} bg-white text-black antialiased`}
-      >
-        <Theme>
-          <main className="w-full min-h-screen">
-            {children}
-          </main>
-        </Theme>
+      <body className={`${inter.className} relative min-h-screen bg-white selection:bg-black selection:text-white`}>
+        
+        {/* --- GLOBAL BACKGROUND (FIXED) --- */}
+        <div className="fixed inset-0 z-[-1] pointer-events-none">
+            <BackgroundBeams className="opacity-40" /> {/* Opacity kam rakhi hai taaki content clear dikhe */}
+        </div>
+
+        {/* Header */}
+        {/* <Header user={user} />  */}
+        
+        {/* Page Content */}
+        {children}
+      
       </body>
     </html>
   );

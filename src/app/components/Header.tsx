@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { logoutUser } from "@/actions/prodactions";
 
-// Import Sub-Components
 import HeaderLogo from "./header/HeaderLogo";
 import HeaderNav from "./header/HeaderNav";
 import HeaderSearch from "./header/HeaderSearch";
@@ -25,7 +24,6 @@ export default function Header({ user }: { user: any }) {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Backup Fetch
   useEffect(() => {
     async function checkUser() {
       try {

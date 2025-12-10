@@ -1,15 +1,35 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import Header from "../components/Header";
 import ItemCard from "../components/Item-card";
-import { deleteProductFromDb } from "@/actions/prodactions";
+import { deleteProductFromDb, getWishlist } from "@/actions/prodactions"; // Import getWishlist
 import WishlistButton from "../components/wishlist-button";
 import FadeIn from "../components/FadeIn"; 
 import FilterModal from "../components/FilterModal"; 
 import SkeletonCard from "../components/SkeletonCard";
 import { FiArrowRight, FiBox, FiGlobe, FiShield } from "react-icons/fi";
 import { AuroraBackground } from "../components/ui/aurora-background"; 
-import { FlipWords } from "../components/ui/flip-words"; // <--- IMPORTED
+import { FlipWords } from "../components/ui/flip-words"; 
+
+// --- ROTATING TEXT COMPONENT ---
+const RotatingText = () => {
+  const words = ["LUXURY.", "FUTURE.", "STYLE.", "CLASS."];
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % words.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#020617] via-[#3b82f6] to-[#020617] bg-[length:200%_auto] animate-[shimmer_3s_linear_infinite] transition-opacity duration-500 block min-h-[1.2em]">
+      {words[index]}
+    </span>
+  );
+};
 
 export default function Home() {
   const [allProducts, setAllProducts] = useState<any[]>([]);
@@ -18,24 +38,45 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [userLoading, setUserLoading] = useState(true);
 
+  // --- 1. DATA FETCHING (FIXED LOGIC) ---
   const fetchData = useCallback(async () => {
     try {
+      // Parallel Fetch: Product + User
       const [prodRes, userRes] = await Promise.all([
         fetch("/api/product", { cache: "no-store" }),
         fetch("/api/me", { cache: "no-store" })
       ]);
 
+      const prodData = await prodRes.json();
+      let activeUser = null;
+
+      // 1. Set User
       if (userRes.ok) {
           const uData = await userRes.json();
-          setCurrentUser(uData.user);
+          activeUser = uData.user;
+          setCurrentUser(activeUser);
       }
       setUserLoading(false);
 
-      const prodData = await prodRes.json();
+      // 2. Set Products with Wishlist Status
       if (prodData.success) {
-          const prods = prodData.products || [];
-          setAllProducts(prods);
-          setFilteredProducts(prods);
+          let rawProducts = prodData.products || [];
+
+          // --- LOGIC FIX: Check Wishlist if User Exists ---
+          if (activeUser) {
+              const wishlistItems = await getWishlist(); // Server Action
+              // Create a Set of Liked Product IDs for fast lookup
+              const likedIds = new Set(wishlistItems.map((w: any) => w.productId));
+              
+              // Map products and set isLiked = true if in wishlist
+              rawProducts = rawProducts.map((p: any) => ({
+                  ...p,
+                  isLiked: likedIds.has(p.id)
+              }));
+          }
+
+          setAllProducts(rawProducts);
+          setFilteredProducts(rawProducts);
       }
     } catch (error) {
       console.error("Error:", error);
@@ -45,8 +86,11 @@ export default function Home() {
     }
   }, []);
 
+  // --- 2. LISTENERS ---
   useEffect(() => {
     fetchData(); 
+    
+    // Optimistic Add Listener
     const handleOptimisticAdd = (e: any) => {
         const newProduct = e.detail; 
         if(newProduct) {
@@ -54,15 +98,33 @@ export default function Home() {
             setFilteredProducts(prev => [newProduct, ...prev]);
         }
     };
+
+    // Wishlist Sync Listener (Keeps UI in sync without reload)
+    const handleWishlistSync = (e: any) => {
+        const { id, status } = e.detail;
+        
+        const updateList = (list: any[]) => list.map(p => 
+            p.id === id ? { ...p, isLiked: status } : p
+        );
+
+        setAllProducts(prev => updateList(prev));
+        setFilteredProducts(prev => updateList(prev));
+    };
+
     const handleRefresh = () => fetchData();
+
     window.addEventListener("product-added-optimistic", handleOptimisticAdd);
     window.addEventListener("product-updated", handleRefresh);
+    window.addEventListener("wishlist-updated", handleWishlistSync);
+    
     return () => {
       window.removeEventListener("product-added-optimistic", handleOptimisticAdd);
       window.removeEventListener("product-updated", handleRefresh);
+      window.removeEventListener("wishlist-updated", handleWishlistSync);
     };
   }, [fetchData]);
 
+  // --- 3. HANDLERS ---
   const handleFilter = (filters: any) => {
     let result = [...allProducts];
     if (filters.category) result = result.filter(p => p.category?.toLowerCase().includes(filters.category.toLowerCase()));
@@ -98,9 +160,11 @@ export default function Home() {
 
       <Header user={currentUser} />
 
+      {/* --- HERO SECTION --- */}
       <AuroraBackground className="h-[90vh]">
-         <FadeIn className="relative z-10 text-center max-w-5xl mx-auto flex flex-col items-center pt-20 px-6">
+         <FadeIn className="relative z-10 text-center max-w-5xl mx-auto flex flex-col items-center pt-28 px-6">
             
+            {/* Welcome Badge */}
             {userLoading ? (
                 <div className="h-12 w-64 bg-white/50 rounded-full animate-pulse mb-8 border border-white/20"></div>
             ) : currentUser ? (
@@ -115,13 +179,9 @@ export default function Home() {
                 </div>
             )}
 
-            {/* --- FIXED FLIP WORDS --- */}
             <div className="text-6xl md:text-9xl font-black tracking-tighter mb-6 text-gray-900 leading-[0.9]">
                 DEFINING <br className="hidden md:block"/>
-                <FlipWords 
-                    words={["LUXURY.", "FUTURE.", "STYLE.", "CLASS."]} 
-                    className="text-transparent bg-clip-text bg-gradient-to-r from-gray-900 via-blue-800 to-gray-900"
-                />
+                <RotatingText />
             </div>
             
             <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10 font-medium leading-relaxed">
@@ -135,7 +195,8 @@ export default function Home() {
          </FadeIn>
       </AuroraBackground>
 
-      <div className="bg-black text-white py-4 mt-15 overflow-hidden border-y border-black relative flex z-20">
+      {/* --- MARQUEE --- */}
+      <div className="mt-20 bg-black text-white py-4 overflow-hidden border-y border-black relative flex z-20">
           <div className="animate-marquee whitespace-nowrap flex gap-8">
               {[1, 2, 3, 4].map((i) => (
                   <React.Fragment key={i}>
@@ -148,6 +209,7 @@ export default function Home() {
           </div>
       </div>
 
+      {/* --- FEATURES GRID --- */}
       <section className="max-w-7xl mx-auto px-6 py-32">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="group relative bg-white border border-gray-100 p-10 rounded-[3rem] h-96 flex flex-col justify-between overflow-hidden hover:shadow-2xl hover:shadow-gray-200 transition-all duration-500 ease-out">
@@ -170,6 +232,7 @@ export default function Home() {
           </div>
       </section>
 
+      {/* --- PRODUCTS GRID --- */}
       <main className="max-w-7xl mx-auto px-6 pb-32">
         <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-16 gap-6">
             <FadeIn><div className="border-l-4 border-black pl-6 py-2"><h2 className="text-4xl md:text-6xl font-black text-gray-900 tracking-tighter leading-none">LATEST <br /> <span className="text-gray-300">DROPS.</span></h2></div></FadeIn>

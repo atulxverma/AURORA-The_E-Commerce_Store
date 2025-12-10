@@ -32,25 +32,15 @@
       "static/chunks/main-app.js",
       "static/chunks/app/(group)/page.js"
     ],
-    "/api/product/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/product/route.js"
-    ],
     "/api/me/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/me/route.js"
     ],
-    "/_not-found/page": [
+    "/api/product/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/_not-found/page.js"
-    ],
-    "/profile/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/profile/page.js"
+      "static/chunks/app/api/product/route.js"
     ],
     "/api/search/route": [
       "static/chunks/webpack.js",
@@ -62,10 +52,20 @@
       "static/chunks/main-app.js",
       "static/chunks/app/search/page.js"
     ],
-    "/(group)/cart/page": [
+    "/login/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(group)/cart/page.js"
+      "static/chunks/app/login/page.js"
+    ],
+    "/api/login/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/login/route.js"
+    ],
+    "/profile/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/profile/page.js"
     ],
     "/wishlist/page": [
       "static/chunks/webpack.js",

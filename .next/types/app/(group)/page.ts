@@ -1,4 +1,4 @@
-// File: C:\Users\atulv\OneDrive\Documents\Desktop\nodejs\E-commerce App Final\E-commerce-App-Final\src\app\(group)\page.tsx
+// File: C:\Users\atulv\OneDrive\Documents\Desktop\nodejs\AURORA\AURORA\src\app\(group)\page.tsx
 import * as entry from '../../../../src/app/(group)/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

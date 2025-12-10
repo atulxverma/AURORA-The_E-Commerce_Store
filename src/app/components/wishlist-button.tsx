@@ -1,28 +1,62 @@
 "use client";
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useEffect } from "react";
 import { FiHeart } from "react-icons/fi";
 import { toggleWishlist } from "@/actions/prodactions";
 import { FaHeart } from "react-icons/fa"; 
-// No router needed for button logic now
+import { useRouter } from "next/navigation";
 
 export default function WishlistButton({ product, initialLiked }: { product: any, initialLiked: boolean }) {
   const [liked, setLiked] = useState(initialLiked);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
+  // 1. Sync with Prop changes
+  useEffect(() => {
+    setLiked(initialLiked);
+  }, [initialLiked]);
+
+  // 2. LISTEN FOR GLOBAL EVENTS (Sync across pages)
+  useEffect(() => {
+    const handleGlobalSync = (e: any) => {
+      const { id, status } = e.detail;
+      // Agar ye wahi product hai jo event me aaya hai, to state update karo
+      if (id === product.id) {
+        setLiked(status);
+      }
+    };
+
+    window.addEventListener("wishlist-updated", handleGlobalSync);
+    return () => window.removeEventListener("wishlist-updated", handleGlobalSync);
+  }, [product.id]);
 
   const handleToggle = () => {
-    // 1. Optimistic Update
     const newState = !liked;
-    setLiked(newState);
+    setLiked(newState); // Instant Local Update
+
+    // 3. BROADCAST EVENT (Sabko batao ki change hua hai)
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("wishlist-updated", { 
+        detail: { id: product.id, status: newState } 
+      }));
+    }
 
     startTransition(async () => {
       const res = await toggleWishlist(product);
       
       if (!res.success) {
-        // 2. Revert if failed
+        // Revert if failed
         setLiked(!newState); 
         
-        // 3. Show Alert ONLY (No Redirect)
-        alert(res.message); // "Please login to add to wishlist"
+        // Broadcast Revert
+        window.dispatchEvent(new CustomEvent("wishlist-updated", { 
+            detail: { id: product.id, status: !newState } 
+        }));
+
+        if (res.message.includes("Login") || res.message.includes("Unauthorized")) {
+            router.push("/login");
+        } else {
+            alert(res.message);
+        }
       }
     });
   };
