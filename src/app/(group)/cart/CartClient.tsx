@@ -2,11 +2,17 @@
 
 import React, { useOptimistic, startTransition } from "react";
 import { deleteProductFromCart, updateQuantity, clearCartInDb } from "@/actions/prodactions";
-import { FiTrash2, FiMinus, FiPlus, FiShoppingBag, FiArrowRight } from "react-icons/fi";
+import {
+  FiTrash2,
+  FiMinus,
+  FiPlus,
+  FiShoppingBag,
+  FiArrowRight,
+} from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import FadeIn from "../../components/FadeIn";
 
-/* ===================== TYPES ===================== */
+/* ================= TYPES ================= */
 
 type CartItem = {
   id: string;
@@ -23,35 +29,43 @@ type CartAction =
   | { action: "update"; id: string; qty: number }
   | { action: "clear" };
 
-/* ===================== COMPONENT ===================== */
+/* ================= COMPONENT ================= */
 
-export default function CartClient({ initialCart }: { initialCart: CartItem[] }) {
+export default function CartClient({
+  initialCart,
+}: {
+  initialCart: CartItem[];
+}) {
   const router = useRouter();
 
-  const [optimisticCart, addOptimisticCart] = useOptimistic<
-    CartItem[],
-    CartAction
-  >(initialCart, (state, updatedItem) => {
-    switch (updatedItem.action) {
-      case "delete":
-        return state.filter(i => i.id !== updatedItem.id);
+  /* ================= OPTIMISTIC STATE ================= */
+  const [optimisticCart, addOptimisticCart] = useOptimistic(
+    initialCart,
+    (
+      state: CartItem[],
+      updatedItem: CartAction
+    ): CartItem[] => {
+      if (updatedItem.action === "delete") {
+        return state.filter((i) => i.id !== updatedItem.id);
+      }
 
-      case "update":
-        return state.map(i =>
+      if (updatedItem.action === "update") {
+        return state.map((i) =>
           i.id === updatedItem.id
             ? { ...i, quantity: updatedItem.qty }
             : i
         );
+      }
 
-      case "clear":
+      if (updatedItem.action === "clear") {
         return [];
+      }
 
-      default:
-        return state;
+      return state;
     }
-  });
+  );
 
-  /* ===================== HANDLERS ===================== */
+  /* ================= HANDLERS ================= */
 
   const handleRemove = async (id: string) => {
     startTransition(() =>
@@ -79,7 +93,7 @@ export default function CartClient({ initialCart }: { initialCart: CartItem[] })
     }
   };
 
-  /* ===================== CALCULATIONS ===================== */
+  /* ================= CALCULATIONS ================= */
 
   const subtotal = optimisticCart.reduce(
     (total, item) => total + item.price * item.quantity,
@@ -90,7 +104,7 @@ export default function CartClient({ initialCart }: { initialCart: CartItem[] })
   const tax = subtotal * 0.18;
   const total = Math.ceil(subtotal + shipping + tax);
 
-  /* ===================== EMPTY CART ===================== */
+  /* ================= EMPTY CART ================= */
 
   if (optimisticCart.length === 0) {
     return (
@@ -98,7 +112,7 @@ export default function CartClient({ initialCart }: { initialCart: CartItem[] })
         <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6 text-gray-300">
           <FiShoppingBag size={40} />
         </div>
-        <h2 className="text-2xl font-black text-gray-900 tracking-tight">
+        <h2 className="text-2xl font-black text-gray-900">
           Your Cart is Empty
         </h2>
         <p className="text-gray-500 mt-2 mb-8">
@@ -106,7 +120,7 @@ export default function CartClient({ initialCart }: { initialCart: CartItem[] })
         </p>
         <button
           onClick={() => router.push("/")}
-          className="bg-black text-white px-8 py-4 rounded-full font-bold text-sm hover:scale-105 transition shadow-xl"
+          className="bg-black text-white px-8 py-4 rounded-full font-bold hover:scale-105 transition"
         >
           Start Shopping
         </button>
@@ -114,28 +128,28 @@ export default function CartClient({ initialCart }: { initialCart: CartItem[] })
     );
   }
 
-  /* ===================== UI ===================== */
+  /* ================= UI ================= */
 
   return (
     <FadeIn className="grid grid-cols-1 lg:grid-cols-12 gap-12 mt-8">
       {/* LEFT */}
       <div className="lg:col-span-8 space-y-6">
         <div className="flex justify-between items-center mb-4 px-2">
-          <h2 className="font-bold text-xl text-gray-900">
+          <h2 className="font-bold text-xl">
             Items ({optimisticCart.length})
           </h2>
           <button
             onClick={handleClear}
-            className="text-xs font-bold text-red-500 hover:underline uppercase"
+            className="text-xs font-bold text-red-500 uppercase hover:underline"
           >
             Clear All
           </button>
         </div>
 
-        {optimisticCart.map(item => (
+        {optimisticCart.map((item) => (
           <div
             key={item.id}
-            className="flex gap-6 bg-white p-4 rounded-[2rem] shadow-sm border hover:shadow-lg transition"
+            className="flex gap-6 bg-white p-4 rounded-3xl border shadow-sm hover:shadow-lg transition"
           >
             <div
               className="w-28 h-28 bg-gray-100 rounded-2xl overflow-hidden cursor-pointer"
@@ -147,7 +161,7 @@ export default function CartClient({ initialCart }: { initialCart: CartItem[] })
                 src={item.image_url || "/placeholder.png"}
                 alt={item.title}
                 className="w-full h-full object-contain p-2"
-                onError={e =>
+                onError={(e) =>
                   (e.currentTarget.src = "/placeholder.png")
                 }
               />
@@ -204,7 +218,7 @@ export default function CartClient({ initialCart }: { initialCart: CartItem[] })
 
       {/* RIGHT */}
       <div className="lg:col-span-4">
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-lg sticky top-32">
+        <div className="bg-white p-8 rounded-3xl shadow-lg sticky top-32">
           <h2 className="font-black mb-6">Order Summary</h2>
 
           <div className="space-y-3 text-sm">
@@ -222,9 +236,9 @@ export default function CartClient({ initialCart }: { initialCart: CartItem[] })
             </div>
           </div>
 
-          <div className="border-t mt-6 pt-6 flex justify-between">
+          <div className="border-t mt-6 pt-6 flex justify-between font-bold">
             <span>Total</span>
-            <span className="text-2xl font-black">
+            <span className="text-2xl">
               ₹{total.toLocaleString()}
             </span>
           </div>
