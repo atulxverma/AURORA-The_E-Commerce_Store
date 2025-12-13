@@ -4,10 +4,10 @@ export default function MenPage() {
   return (
     <CategoryTemplate 
         title="Men" 
-        subtitle="Refined aesthetics for the modern gentleman. Discover suits, streetwear, and essentials."
+        subtitle="Refined aesthetics for the modern gentleman. Suits, shirts, and sneakers."
         filterType="category"
         filterValue="men"
-        heroGradient="bg-gradient-to-r from-blue-50 via-gray-50 to-white"
+        heroGradient="bg-gradient-to-r from-slate-50 via-gray-100 to-white"
     />
   );
 }

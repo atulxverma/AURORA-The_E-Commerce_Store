@@ -4,7 +4,7 @@ export default function WomenPage() {
   return (
     <CategoryTemplate 
         title="Women" 
-        subtitle="Elegance redefined. Explore the latest trends in dresses, footwear, and accessories."
+        subtitle="Elegance redefined. Discover dresses, bags, and exclusive jewelry."
         filterType="category"
         filterValue="women"
         heroGradient="bg-gradient-to-r from-pink-50 via-rose-50 to-white"

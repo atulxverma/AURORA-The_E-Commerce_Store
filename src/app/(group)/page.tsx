@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import Header from "../components/Header";
 import ItemCard from "../components/Item-card";
 import { deleteProductFromDb, getWishlist } from "@/actions/prodactions"; // Import getWishlist
@@ -12,18 +11,14 @@ import { FiArrowRight, FiBox, FiGlobe, FiShield } from "react-icons/fi";
 import { AuroraBackground } from "../components/ui/aurora-background"; 
 import { FlipWords } from "../components/ui/flip-words"; 
 
-// --- ROTATING TEXT COMPONENT ---
+// Rotating Text Component
 const RotatingText = () => {
   const words = ["LUXURY.", "FUTURE.", "STYLE.", "CLASS."];
   const [index, setIndex] = useState(0);
-
   useEffect(() => {
-    const interval = setInterval(() => {
-      setIndex((prev) => (prev + 1) % words.length);
-    }, 2500);
+    const interval = setInterval(() => setIndex((prev) => (prev + 1) % words.length), 2500);
     return () => clearInterval(interval);
   }, []);
-
   return (
     <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#020617] via-[#3b82f6] to-[#020617] bg-[length:200%_auto] animate-[shimmer_3s_linear_infinite] transition-opacity duration-500 block min-h-[1.2em]">
       {words[index]}
@@ -38,10 +33,10 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [userLoading, setUserLoading] = useState(true);
 
-  // --- 1. DATA FETCHING (FIXED LOGIC) ---
+  // --- DATA FETCHING (FIXED SYNC) ---
   const fetchData = useCallback(async () => {
     try {
-      // Parallel Fetch: Product + User
+      // 1. Fetch Product & User
       const [prodRes, userRes] = await Promise.all([
         fetch("/api/product", { cache: "no-store" }),
         fetch("/api/me", { cache: "no-store" })
@@ -50,7 +45,6 @@ export default function Home() {
       const prodData = await prodRes.json();
       let activeUser = null;
 
-      // 1. Set User
       if (userRes.ok) {
           const uData = await userRes.json();
           activeUser = uData.user;
@@ -58,25 +52,22 @@ export default function Home() {
       }
       setUserLoading(false);
 
-      // 2. Set Products with Wishlist Status
       if (prodData.success) {
-          let rawProducts = prodData.products || [];
+          let prods = prodData.products || [];
 
-          // --- LOGIC FIX: Check Wishlist if User Exists ---
+          // 2. IF USER EXISTS, FETCH WISHLIST AND MERGE IMMEDIATELY
           if (activeUser) {
-              const wishlistItems = await getWishlist(); // Server Action
-              // Create a Set of Liked Product IDs for fast lookup
+              const wishlistItems = await getWishlist();
               const likedIds = new Set(wishlistItems.map((w: any) => w.productId));
               
-              // Map products and set isLiked = true if in wishlist
-              rawProducts = rawProducts.map((p: any) => ({
+              prods = prods.map((p: any) => ({
                   ...p,
-                  isLiked: likedIds.has(p.id)
+                  isLiked: likedIds.has(p.id) // Set true instantly
               }));
           }
 
-          setAllProducts(rawProducts);
-          setFilteredProducts(rawProducts);
+          setAllProducts(prods);
+          setFilteredProducts(prods);
       }
     } catch (error) {
       console.error("Error:", error);
@@ -86,11 +77,10 @@ export default function Home() {
     }
   }, []);
 
-  // --- 2. LISTENERS ---
   useEffect(() => {
     fetchData(); 
     
-    // Optimistic Add Listener
+    // Listeners
     const handleOptimisticAdd = (e: any) => {
         const newProduct = e.detail; 
         if(newProduct) {
@@ -99,14 +89,11 @@ export default function Home() {
         }
     };
 
-    // Wishlist Sync Listener (Keeps UI in sync without reload)
     const handleWishlistSync = (e: any) => {
         const { id, status } = e.detail;
-        
         const updateList = (list: any[]) => list.map(p => 
             p.id === id ? { ...p, isLiked: status } : p
         );
-
         setAllProducts(prev => updateList(prev));
         setFilteredProducts(prev => updateList(prev));
     };
@@ -124,7 +111,7 @@ export default function Home() {
     };
   }, [fetchData]);
 
-  // --- 3. HANDLERS ---
+  // Handlers
   const handleFilter = (filters: any) => {
     let result = [...allProducts];
     if (filters.category) result = result.filter(p => p.category?.toLowerCase().includes(filters.category.toLowerCase()));
@@ -160,11 +147,10 @@ export default function Home() {
 
       <Header user={currentUser} />
 
-      {/* --- HERO SECTION --- */}
+      {/* HERO SECTION */}
       <AuroraBackground className="h-[90vh]">
          <FadeIn className="relative z-10 text-center max-w-5xl mx-auto flex flex-col items-center pt-28 px-6">
             
-            {/* Welcome Badge */}
             {userLoading ? (
                 <div className="h-12 w-64 bg-white/50 rounded-full animate-pulse mb-8 border border-white/20"></div>
             ) : currentUser ? (
@@ -195,7 +181,7 @@ export default function Home() {
          </FadeIn>
       </AuroraBackground>
 
-      {/* --- MARQUEE --- */}
+      {/* MARQUEE */}
       <div className="mt-20 bg-black text-white py-4 overflow-hidden border-y border-black relative flex z-20">
           <div className="animate-marquee whitespace-nowrap flex gap-8">
               {[1, 2, 3, 4].map((i) => (
@@ -209,7 +195,7 @@ export default function Home() {
           </div>
       </div>
 
-      {/* --- FEATURES GRID --- */}
+      {/* FEATURES */}
       <section className="max-w-7xl mx-auto px-6 py-32">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="group relative bg-white border border-gray-100 p-10 rounded-[3rem] h-96 flex flex-col justify-between overflow-hidden hover:shadow-2xl hover:shadow-gray-200 transition-all duration-500 ease-out">
@@ -250,7 +236,16 @@ export default function Home() {
               return (
                 <FadeIn key={item.id} delay={index * 0.05}>
                     <div className="relative group h-full">
-                        {!isOwner && (<div className="absolute top-3 right-3 z-30 transform transition hover:scale-110"><WishlistButton product={item} initialLiked={item.isLiked || false} /></div>)}
+                        {!isOwner && (
+                            <div className="absolute top-3 right-3 z-30 transform transition hover:scale-110">
+                                {/* PASSED PRE-CALCULATED ISLIKED */}
+                                <WishlistButton 
+                                    key={item.isLiked ? 'liked' : 'unliked'} // FORCE RE-RENDER
+                                    product={item} 
+                                    initialLiked={item.isLiked || false} 
+                                />
+                            </div>
+                        )}
                         <ItemCard item={item} deleteItem={isOwner ? handleDelete : undefined} />
                     </div>
                 </FadeIn>

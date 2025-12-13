@@ -8,7 +8,7 @@ import FadeIn from '@/app/components/FadeIn';
 import ReviewsSection from '@/app/components/ReviewsSection'; 
 import WishlistButton from '@/app/components/wishlist-button'; 
 import { FiCheckCircle, FiPackage, FiTag, FiStar } from "react-icons/fi";
-import { getWishlist } from "@/actions/prodactions"; // Action Import
+import { getWishlist } from "@/actions/prodactions"; // Import Action
 
 export default function ProductPage() {
   const params = useParams();  
@@ -19,6 +19,7 @@ export default function ProductPage() {
   const [loading, setLoading] = useState(true);
   
   // --- STATE FOR WISHLIST STATUS ---
+  // Isse hum track karenge ki item wishlist me hai ya nahi
   const [isLiked, setIsLiked] = useState(false);
 
   useEffect(() => {
@@ -32,15 +33,15 @@ export default function ProductPage() {
         // 2. Fetch User
         const userRes = await fetch("/api/me");
         if (userRes.ok) {
-            const uData = await userRes.json();
-            setCurrentUser(uData.user);
+            const userData = await userRes.json();
+            setCurrentUser(userData.user);
 
-            // 3. CHECK WISHLIST STATUS (Server Action)
-            if (uData.user) {
+            // 3. CHECK WISHLIST STATUS (Fix for Reload Issue)
+            if (userData.user) {
                 const wishlistItems = await getWishlist();
-                // Robust ID check (String conversion ensures safety)
+                // Robust Check: String comparison to be safe
                 const found = wishlistItems.find((w: any) => String(w.productId) === String(id));
-                setIsLiked(!!found); 
+                setIsLiked(!!found); // Set true if found
             }
         }
       } catch (err) {
@@ -52,7 +53,16 @@ export default function ProductPage() {
     if(id) fetchData();
   }, [id]);
 
-  // Helper: Star Renderer
+  // Listener to sync state if toggled elsewhere (optional but good)
+  useEffect(() => {
+    const handleSync = (e: any) => {
+        if(e.detail.id === id) setIsLiked(e.detail.status);
+    };
+    window.addEventListener("wishlist-updated", handleSync);
+    return () => window.removeEventListener("wishlist-updated", handleSync);
+  }, [id]);
+
+  // Star Renderer
   const renderStars = (rating: number) => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -69,7 +79,6 @@ export default function ProductPage() {
   if (loading) return <div className="min-h-screen bg-gray-50 pt-40 text-center"><div className="animate-pulse text-xl font-bold text-gray-400">Loading...</div></div>;
   if (!product) return <div className="min-h-screen bg-gray-50 pt-40 text-center"><div className="text-xl font-bold text-red-500">Product not found</div></div>;
 
-  // Logic Checks
   const isDbProduct = product.id.length === 24;
   const isOwner = isDbProduct && currentUser?.id === product.ownerId;
   const image = product.thumbnail || product.images?.[0] || product.image_url || "/placeholder.png";
@@ -89,12 +98,11 @@ export default function ProductPage() {
           {/* LEFT: Image */}
           <FadeIn className="lg:sticky lg:top-32 bg-gray-50 rounded-[2.5rem] overflow-hidden flex items-center justify-center h-[500px] lg:h-[600px] relative border border-gray-100 group">
              
-             {/* --- WISHLIST BUTTON --- */}
+             {/* --- WISHLIST BUTTON (FIXED) --- */}
              {!isOwner && (
-                 <div className="absolute top-6 right-6 z-20 bg-white rounded-full shadow-lg hover:scale-110 transition p-1">
+                 <div className="absolute top-6 right-6 z-20 bg-white rounded-full shadow-lg hover:scale-110 transition p-1 cursor-pointer">
+                     {/* Key prop forces re-render when state changes */}
                      <WishlistButton 
-                        // KEY PROP IS THE MAGIC FIX:
-                        // It forces the component to re-render when isLiked changes
                         key={isLiked ? "liked" : "unliked"} 
                         product={product} 
                         initialLiked={isLiked} 
@@ -170,7 +178,7 @@ export default function ProductPage() {
                        You own this product
                    </button>
                ) : (
-                   <div className="w-full transform transition active:scale-95">
+                   <div className="w-full transform transition active:scale-95 cursor-pointer">
                       <AddToCart item={product} />
                    </div>
                )}

@@ -6,118 +6,142 @@ import FadeIn from "./FadeIn";
 import WishlistButton from "./wishlist-button";
 import SkeletonCard from "./SkeletonCard";
 import { getWishlist } from "@/actions/prodactions";
-import { FiSliders, FiChevronDown, FiX, FiSearch } from "react-icons/fi";
+import { FiChevronDown, FiSearch, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
 interface CategoryTemplateProps {
   title: string;
   subtitle: string;
   filterType: "category" | "tag" | "sale" | "new";
-  filterValue: string; // e.g., "men", "women", "sale"
-  heroGradient: string; // Custom gradient for each page
+  filterValue: string; 
+  heroGradient: string; 
 }
 
+const ITEMS_PER_PAGE = 40;
+
 export default function CategoryTemplate({ title, subtitle, filterType, filterValue, heroGradient }: CategoryTemplateProps) {
-  const [allProducts, setAllProducts] = useState<any[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  
-  // Filters
   const [sortOrder, setSortOrder] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
+  // --- MAIN FETCH LOGIC (FIXED) ---
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
-        // Fetch ALL products first
+        
+        // 1. Fetch Everything in Parallel
         const [prodRes, userRes] = await Promise.all([
-            fetch("/api/product", { cache: "no-store" }),
+            fetch("https://dummyjson.com/products?limit=100"), 
             fetch("/api/me")
         ]);
 
-        const prodData = await prodRes.json();
-        let products = prodData.products || [];
-        let activeUser = null;
+        const apiData = await prodRes.json();
+        let products = apiData.products || [];
+        
+        // 2. Fetch DB Products
+        const dbRes = await fetch('/api/product');
+        const dbData = await dbRes.json();
+        if(dbData.success) {
+             const dbProds = dbData.products.filter((p:any) => p.id.length === 24);
+             products = [...dbProds, ...products];
+        }
 
+        // 3. Handle User
+        let activeUser = null;
         if (userRes.ok) {
             const uData = await userRes.json();
             activeUser = uData.user;
             setCurrentUser(activeUser);
         }
 
-        // --- CORE FILTER LOGIC ---
+        // 4. FILTER LOGIC
         if (filterType === "category") {
-            // Loose matching (e.g. "men" matches "mens-shirts", "men-shoes")
-            // But ensure "men" doesn't match "women"
             products = products.filter((p: any) => {
-                const cat = p.category.toLowerCase();
-                if (filterValue === "men") return cat.includes("men") && !cat.includes("women");
-                if (filterValue === "women") return cat.includes("women") || cat.includes("dress");
-                return cat.includes(filterValue);
+                const cat = (p.category || "").toLowerCase();
+                const tit = (p.title || "").toLowerCase();
+                const val = filterValue.toLowerCase();
+
+                if (["smartphones", "laptops", "automotive", "motorcycle", "lighting", "groceries"].includes(cat)) return false;
+
+                if (val === "men") {
+                    return (cat === "mens-shirts" || cat === "mens-shoes" || cat === "mens-watches" || (tit.includes("men") && !tit.includes("women")));
+                }
+                if (val === "women") {
+                    return (cat.includes("women") || cat === "tops" || cat === "skincare" || cat === "fragrances" || tit.includes("lipstick") || tit.includes("mascara") || tit.includes("perfume"));
+                }
+                if (val === "accessories") {
+                    return (cat === "sunglasses" || cat.includes("watch") || cat.includes("jewel") || cat.includes("bag"));
+                }
+                return cat.includes(val);
             });
         } 
         else if (filterType === "sale") {
-            // Mock Sale: Products cheaper than 500 or random logic
-            products = products.filter((p: any) => p.price < 100); 
+            products = products.filter((p: any) => p.discountPercentage > 10 || p.price < 50); 
         }
         else if (filterType === "new") {
-            // Mock New: Just take last 10 products
-            products = products.slice(0, 10);
+            products = products.slice(0, 20);
         }
 
-        // Check Wishlist
+        // 5. WISHLIST CHECK (CRITICAL FIX)
         if (activeUser) {
-            const wishlistItems = await getWishlist();
-            const likedIds = new Set(wishlistItems.map((w: any) => w.productId));
-            products = products.map((p: any) => ({ ...p, isLiked: likedIds.has(p.id) }));
+            const wishlistItems = await getWishlist(); // Server Action
+            const likedIds = new Set(wishlistItems.map((w: any) => String(w.productId))); // Ensure String ID match
+            
+            // Update isLiked flag BEFORE setting state
+            products = products.map((p: any) => ({
+                ...p,
+                isLiked: likedIds.has(String(p.id))
+            }));
         }
 
-        setAllProducts(products);
         setFilteredProducts(products);
+        setCurrentPage(1);
 
       } catch (err) { console.error(err); } finally { setLoading(false); }
     }
     fetchData();
   }, [filterType, filterValue]);
 
-  // Sync with Wishlist Events
+  // --- LISTENER FOR INSTANT SYNC ---
   useEffect(() => {
     const handleWishlistSync = (e: any) => {
         const { id, status } = e.detail;
-        const updateList = (list: any[]) => list.map(p => p.id === id ? { ...p, isLiked: status } : p);
-        setAllProducts(prev => updateList(prev));
-        setFilteredProducts(prev => updateList(prev));
+        setFilteredProducts(prev => prev.map(p => 
+            p.id === id ? { ...p, isLiked: status } : p
+        ));
     };
     window.addEventListener("wishlist-updated", handleWishlistSync);
     return () => window.removeEventListener("wishlist-updated", handleWishlistSync);
   }, []);
 
-  // Sort Logic
-  useEffect(() => {
-    let result = [...allProducts];
-    if (sortOrder === "asc") result.sort((a, b) => a.price - b.price);
-    if (sortOrder === "desc") result.sort((a, b) => b.price - a.price);
-    setFilteredProducts(result);
-  }, [sortOrder, allProducts]);
+  const sortedProducts = [...filteredProducts];
+  if (sortOrder === "asc") sortedProducts.sort((a, b) => a.price - b.price);
+  if (sortOrder === "desc") sortedProducts.sort((a, b) => b.price - a.price);
+
+  const totalPages = Math.ceil(sortedProducts.length / ITEMS_PER_PAGE);
+  const currentProducts = sortedProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+        setCurrentPage(newPage);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white">
       <Header user={currentUser} />
       
-      {/* --- PREMIUM HERO HEADER --- */}
       <div className={`relative pt-44 pb-20 px-6 overflow-hidden ${heroGradient}`}>
          <div className="absolute inset-0 bg-white/30 backdrop-blur-3xl"></div>
          <FadeIn className="relative z-10 max-w-7xl mx-auto flex flex-col md:flex-row items-end justify-between gap-8">
             <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 mb-2">Collection</p>
-                <h1 className="text-6xl md:text-8xl font-black text-gray-900 tracking-tighter leading-none uppercase">
-                    {title}
-                </h1>
+                <h1 className="text-6xl md:text-8xl font-black text-gray-900 tracking-tighter leading-none uppercase">{title}</h1>
                 <p className="text-lg text-gray-600 mt-4 max-w-xl font-medium">{subtitle}</p>
             </div>
-            
-            {/* Controls */}
             <div className="flex items-center gap-4">
                 <div className="relative group">
                     <div className="flex items-center gap-3 bg-white/60 backdrop-blur-xl border border-white/50 px-5 py-3 rounded-2xl shadow-sm hover:border-black/20 transition-all cursor-pointer">
@@ -138,31 +162,49 @@ export default function CategoryTemplate({ title, subtitle, filterType, filterVa
         <main>
             <FadeIn>
                 {loading ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">{[1,2,3,4,5,6,7,8].map(i => <div key={i} className="aspect-[3/4] bg-gray-100 rounded-[1.5rem] animate-pulse"></div>)}</div>
-                ) : filteredProducts.length === 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">{[1,2,3,4,5,6,7,8].map(i => <SkeletonCard key={i} />)}</div>
+                ) : sortedProducts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-[40vh] text-center border-2 border-dashed border-gray-100 rounded-[3rem]">
                         <FiSearch className="text-5xl text-gray-300 mb-4"/>
                         <h3 className="text-xl font-black text-gray-900">No Products Found</h3>
                         <p className="text-sm text-gray-500 mt-2">Check back later for new drops.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-12">
-                        {filteredProducts.map((item, index) => {
-                            const isOwner = currentUser?.id === item.ownerId;
-                            return (
-                                <FadeIn key={item.id} delay={index * 0.05}>
-                                    <div className="relative group h-full">
-                                        {!isOwner && (
-                                            <div className="absolute top-2 right-2 z-30 transform transition group-hover:scale-110">
-                                                <WishlistButton product={item} initialLiked={item.isLiked || false} />
-                                            </div>
-                                        )}
-                                        <ItemCard item={item} />
-                                    </div>
-                                </FadeIn>
-                            );
-                        })}
-                    </div>
+                    <>
+                        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-12 mb-16">
+                            {currentProducts.map((item, index) => {
+                                const isOwner = currentUser?.id === item.ownerId;
+                                return (
+                                    <FadeIn key={item.id} delay={index * 0.05}>
+                                        <div className="relative group h-full">
+                                            {!isOwner && (
+                                                <div className="absolute top-2 right-2 z-30 transform transition group-hover:scale-110">
+                                                    {/* Using Key to Force Re-render if Liked status changes */}
+                                                    <WishlistButton 
+                                                        key={item.isLiked ? 'liked' : 'unliked'}
+                                                        product={item} 
+                                                        initialLiked={item.isLiked || false} 
+                                                    />
+                                                </div>
+                                            )}
+                                            <ItemCard 
+                                                item={item} 
+                                                deleteItem={isOwner ? () => alert("Go to dashboard to manage") : undefined} 
+                                            />
+                                        </div>
+                                    </FadeIn>
+                                );
+                            })}
+                        </div>
+
+                        {totalPages > 1 && (
+                            <div className="flex justify-center items-center gap-4">
+                                <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="p-3 rounded-full bg-white border border-gray-200 shadow-sm hover:bg-black hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black transition-all"><FiChevronLeft size={20} /></button>
+                                <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Page {currentPage} of {totalPages}</span>
+                                <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} className="p-3 rounded-full bg-white border border-gray-200 shadow-sm hover:bg-black hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black transition-all"><FiChevronRight size={20} /></button>
+                            </div>
+                        )}
+                    </>
                 )}
             </FadeIn>
         </main>

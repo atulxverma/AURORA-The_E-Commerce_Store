@@ -91,11 +91,16 @@ export default async function WishlistPage() {
             {wishlistItems.map((item, i) => (
                 <FadeIn key={item.id} delay={i * 0.05}>
                     <div className="relative group h-full">
-                        {/* Red Heart to Remove */}
-                        <div className="absolute top-3 right-3 z-30 transform transition hover:scale-110 cursor-pointer">
-                            <WishlistButton product={{ id: item.productId }} initialLiked={true} />
+                        
+                        {/* --- FIXED: Increased spacing (top-4 right-4) --- */}
+                        <div className="absolute top-4 right-4 z-30 transform transition hover:scale-110 cursor-pointer">
+                            <WishlistButton 
+                                product={{ id: item.productId }} 
+                                initialLiked={true} 
+                            />
                         </div>
-                        {/* Card */}
+                        
+                        {/* CARD */}
                         <ItemCard 
                             item={{
                                 id: item.productId, 

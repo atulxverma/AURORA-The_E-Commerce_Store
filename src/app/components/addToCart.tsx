@@ -7,29 +7,22 @@ export default function AddToCart({ item }: { item: any }) {
   const [isPending, startTransition] = useTransition();
 
   function handleAdd(e: React.MouseEvent) {
-    e.preventDefault(); // Link click hone se rokne ke liye (agar card ke andar hai)
+    e.preventDefault(); 
     e.stopPropagation();
 
     startTransition(async () => {
-      // Payload clean karke bhej rahe hain
       const payload = {
         id: item.id,
         title: item.title,
         price: item.price,
         description: item.description,
         category: item.category,
-        // Images logic handle kar rahe hain
         thumbnail: item.thumbnail || item.image_url || item.images?.[0] || ""
       };
 
       const res = await addProductToCart(payload);
-      
-      if (res.success) {
-        // Optional: Toast notification laga sakte ho yahan
-        console.log("Added!");
-      } else {
-        alert("Error: " + res.message);
-      }
+      if (res.success) console.log("Added!");
+      else alert("Error: " + res.message);
     });
   }
 
@@ -37,16 +30,13 @@ export default function AddToCart({ item }: { item: any }) {
     <button
       onClick={handleAdd}
       disabled={isPending}
-      className="w-full flex items-center justify-center gap-2 bg-black text-white dark:bg-white dark:text-black font-medium py-3 rounded-xl hover:opacity-80 transition active:scale-95 disabled:opacity-60"
+      // Added cursor-pointer
+      className="w-full flex items-center justify-center gap-2 bg-black text-white font-bold py-3 rounded-xl hover:scale-[1.02] transition shadow-md active:scale-95 disabled:opacity-60 cursor-pointer text-sm"
     >
       {isPending ? (
-        <>
-          <FiLoader className="animate-spin" /> Adding...
-        </>
+        <> <FiLoader className="animate-spin" /> Adding... </>
       ) : (
-        <>
-          <FiShoppingBag /> Add to Cart
-        </>
+        <> <FiShoppingBag /> Add to Cart </>
       )}
     </button>
   );

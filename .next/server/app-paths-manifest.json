@@ -1,11 +1,11 @@
 {
+  "/favicon.ico/route": "app/favicon.ico/route.js",
   "/api/product/route": "app/api/product/route.js",
   "/api/me/route": "app/api/me/route.js",
   "/new-arrivals/page": "app/new-arrivals/page.js",
-  "/men/page": "app/men/page.js",
-  "/women/page": "app/women/page.js",
-  "/accessories/page": "app/accessories/page.js",
+  "/wishlist/page": "app/wishlist/page.js",
   "/sale/page": "app/sale/page.js",
+  "/profile/page": "app/profile/page.js",
   "/(group)/page": "app/(group)/page.js",
   "/(group)/cart/page": "app/(group)/cart/page.js"
 }
