@@ -27,6 +27,7 @@ export default function EditProdButton({ product }: { product: any }) {
   .filter((val, index, self) => self.indexOf(val) === index);
 
   const [images, setImages] = useState<string[]>(initialImages);
+  
   const [isPending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement | null>(null);
   const urlInputRef = useRef<HTMLInputElement | null>(null);
@@ -36,6 +37,7 @@ export default function EditProdButton({ product }: { product: any }) {
     setMounted(true);
   }, []);
 
+  // --- FIXED: Accepts proper Event Type ---
   const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files; if (!files) return;
     const newImgs: string[] = [];
@@ -59,9 +61,7 @@ export default function EditProdButton({ product }: { product: any }) {
   const handleUpdate = () => {
     const finalImages = images.filter(Boolean);
     const mainImage = finalImages[0] || ""; 
-    
-    // --- FIX: Added (t: string) type definition ---
-    const tagArray = tags.split(",").map((t: string) => t.trim()).filter(Boolean);
+    const tagArray = tags.split(",").map((t: string) => t.trim()).filter(Boolean); // Type fix for tags
 
     const payload = { 
         id: product.id, 
@@ -69,7 +69,7 @@ export default function EditProdButton({ product }: { product: any }) {
         description, 
         price: Number(price), 
         category, 
-        tags: tagArray, // Use typed array
+        tags: tagArray,
         image_url: mainImage, 
         images: finalImages 
     };
@@ -108,7 +108,14 @@ export default function EditProdButton({ product }: { product: any }) {
             </div>
             <div className="space-y-5">
                 <label className="text-xs font-bold text-gray-500 uppercase">Manage Images</label>
-                <div onClick={() => fileRef.current?.click()} className="border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-50"><AiOutlineCloudUpload size={32} className="text-gray-400" /><span className="text-sm text-gray-600 mt-2">Upload New Images</span><input ref={fileRef} type="file" multiple accept="image/*" className="hidden" onChange={e => handleFiles(e.target.files)} /></div>
+                
+                {/* --- FIX IS HERE: onChange={handleFiles} (No arrow function wrapper needed) --- */}
+                <div onClick={() => fileRef.current?.click()} className="border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-50">
+                    <AiOutlineCloudUpload size={32} className="text-gray-400" />
+                    <span className="text-sm text-gray-600 mt-2">Upload New Images</span>
+                    <input ref={fileRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFiles} />
+                </div>
+
                 <div className="flex gap-2"><input ref={urlInputRef} className="flex-1 bg-gray-50 border border-gray-200 p-2 rounded-lg text-sm outline-none" placeholder="Add Image URL" /><button onClick={handleAddUrl} type="button" className="bg-black text-white px-4 rounded-lg text-sm">Add</button></div>
                 <div className="grid grid-cols-3 gap-3 max-h-60 overflow-y-auto p-1">{images.map((src, i) => (<div key={i} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200"><img src={src} className="w-full h-full object-cover" alt="img" /><button onClick={() => removeImage(i)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"><FiTrash2 size={12} /></button></div>))}</div>
             </div>
