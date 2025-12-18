@@ -12,7 +12,7 @@ import {
 import { useRouter } from "next/navigation";
 import FadeIn from "../../components/FadeIn";
 
-/* ================= TYPES ================= */
+/* ================= TYPES (FIXED) ================= */
 
 type CartItem = {
   id: string;
@@ -20,8 +20,9 @@ type CartItem = {
   title: string;
   price: number;
   quantity: number;
-  image_url?: string;
-  category?: string;
+  // FIX: Allow null because DB returns null
+  image_url?: string | null; 
+  category?: string | null;
 };
 
 type CartAction =
@@ -120,7 +121,7 @@ export default function CartClient({
         </p>
         <button
           onClick={() => router.push("/")}
-          className="bg-black text-white px-8 py-4 rounded-full font-bold hover:scale-105 transition"
+          className="bg-black text-white px-8 py-4 rounded-full font-bold hover:scale-105 transition shadow-lg cursor-pointer"
         >
           Start Shopping
         </button>
@@ -135,12 +136,12 @@ export default function CartClient({
       {/* LEFT */}
       <div className="lg:col-span-8 space-y-6">
         <div className="flex justify-between items-center mb-4 px-2">
-          <h2 className="font-bold text-xl">
+          <h2 className="font-bold text-xl text-gray-900">
             Items ({optimisticCart.length})
           </h2>
           <button
             onClick={handleClear}
-            className="text-xs font-bold text-red-500 uppercase hover:underline"
+            className="text-xs font-bold text-red-500 uppercase hover:underline cursor-pointer"
           >
             Clear All
           </button>
@@ -149,10 +150,11 @@ export default function CartClient({
         {optimisticCart.map((item) => (
           <div
             key={item.id}
-            className="flex gap-6 bg-white p-4 rounded-3xl border shadow-sm hover:shadow-lg transition"
+            className="flex gap-6 bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 group"
           >
+            {/* Image */}
             <div
-              className="w-28 h-28 bg-gray-100 rounded-2xl overflow-hidden cursor-pointer"
+              className="w-28 h-28 flex-shrink-0 bg-[#F4F4F5] rounded-2xl overflow-hidden relative cursor-pointer"
               onClick={() =>
                 router.push(`/product/${item.productId || item.id}`)
               }
@@ -160,45 +162,46 @@ export default function CartClient({
               <img
                 src={item.image_url || "/placeholder.png"}
                 alt={item.title}
-                className="w-full h-full object-contain p-2"
+                className="w-full h-full object-contain p-2 mix-blend-multiply transition-transform duration-500 group-hover:scale-110"
                 onError={(e) =>
                   (e.currentTarget.src = "/placeholder.png")
                 }
               />
             </div>
 
-            <div className="flex-1 flex flex-col justify-between">
-              <div className="flex justify-between">
-                <div>
-                  <h3 className="font-bold text-lg">{item.title}</h3>
-                  <p className="text-xs text-gray-500 uppercase">
+            {/* Content */}
+            <div className="flex-1 flex flex-col justify-between py-1">
+              <div className="flex justify-between items-start">
+                <div onClick={() => router.push(`/product/${item.productId || item.id}`)} className="cursor-pointer group/link">
+                  <h3 className="font-bold text-lg text-gray-900 line-clamp-1 group-hover/link:text-blue-600 transition-colors">{item.title}</h3>
+                  <p className="text-xs text-gray-500 font-medium mt-1 uppercase tracking-wide">
                     {item.category || "General"}
                   </p>
                 </div>
-                <span className="font-black">
+                <span className="font-black text-lg text-gray-900">
                   ₹{(item.price * item.quantity).toLocaleString()}
                 </span>
               </div>
 
               <div className="flex justify-between items-end">
-                <div className="flex items-center gap-3 bg-gray-50 p-1 rounded-xl">
+                <div className="flex items-center bg-gray-50 rounded-xl p-1 gap-3 border border-gray-100">
                   <button
                     disabled={item.quantity <= 1}
                     onClick={() =>
                       handleQty(item.id, item.quantity - 1)
                     }
-                    className="w-8 h-8 bg-white rounded-lg"
+                    className="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-gray-600 hover:text-black hover:bg-gray-100 disabled:opacity-50 transition cursor-pointer active:scale-95"
                   >
                     <FiMinus size={12} />
                   </button>
 
-                  <span className="font-bold">{item.quantity}</span>
+                  <span className="text-sm font-bold w-6 text-center select-none">{item.quantity}</span>
 
                   <button
                     onClick={() =>
                       handleQty(item.id, item.quantity + 1)
                     }
-                    className="w-8 h-8 bg-black text-white rounded-lg"
+                    className="w-8 h-8 flex items-center justify-center bg-black text-white rounded-lg shadow-sm hover:bg-gray-800 transition cursor-pointer active:scale-95"
                   >
                     <FiPlus size={12} />
                   </button>
@@ -206,7 +209,8 @@ export default function CartClient({
 
                 <button
                   onClick={() => handleRemove(item.id)}
-                  className="text-gray-400 hover:text-red-500"
+                  className="text-gray-400 hover:text-red-500 transition p-2 rounded-full hover:bg-red-50 cursor-pointer active:scale-90"
+                  title="Remove Item"
                 >
                   <FiTrash2 size={18} />
                 </button>
@@ -218,37 +222,41 @@ export default function CartClient({
 
       {/* RIGHT */}
       <div className="lg:col-span-4">
-        <div className="bg-white p-8 rounded-3xl shadow-lg sticky top-32">
-          <h2 className="font-black mb-6">Order Summary</h2>
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-lg border border-gray-100 sticky top-32">
+          <h2 className="text-xl font-black text-gray-900 mb-6 uppercase tracking-tight">Order Summary</h2>
 
-          <div className="space-y-3 text-sm">
+          <div className="space-y-4 text-sm text-gray-600 font-medium">
             <div className="flex justify-between">
               <span>Subtotal</span>
-              <span>₹{subtotal.toLocaleString()}</span>
+              <span className="text-gray-900 font-bold">₹{subtotal.toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
               <span>Shipping</span>
-              <span>{shipping === 0 ? "FREE" : `₹${shipping}`}</span>
+              <span>{shipping === 0 ? <span className="text-green-600 font-bold">FREE</span> : `₹${shipping}`}</span>
             </div>
             <div className="flex justify-between">
               <span>Tax (18%)</span>
-              <span>₹{tax.toLocaleString()}</span>
+              <span className="text-gray-900 font-bold">₹{tax.toLocaleString()}</span>
             </div>
           </div>
 
-          <div className="border-t mt-6 pt-6 flex justify-between font-bold">
-            <span>Total</span>
-            <span className="text-2xl">
+          <div className="border-t border-gray-100 my-6 pt-6 flex justify-between items-end">
+            <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Total</span>
+            <span className="text-3xl font-black text-gray-900">
               ₹{total.toLocaleString()}
             </span>
           </div>
 
           <button
             onClick={() => router.push("/checkout")}
-            className="w-full mt-6 bg-black text-white py-4 rounded-2xl font-bold flex justify-center gap-2"
+            className="w-full bg-black text-white py-4 rounded-2xl font-bold text-lg hover:scale-[1.02] hover:bg-gray-900 active:scale-95 transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer"
           >
             Checkout <FiArrowRight />
           </button>
+          
+          <p className="text-center text-xs text-gray-400 mt-4 font-medium flex justify-center gap-2">
+                <span>🔒 Secure Checkout</span> • <span>↺ Free Returns</span>
+          </p>
         </div>
       </div>
     </FadeIn>

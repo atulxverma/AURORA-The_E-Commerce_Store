@@ -1,36 +1,3 @@
-// //@ts-nocheck
-// "use client";
-
-// import { button } from "framer-motion/client";
-// import { deleteProductFromDb } from "@/actions/prodactions";
-// import React from "react";
-
-// export default function DeleteItem({id, deleteItem}) {
-//   async function handleDelete(id) {
-//     // deleteItem(id);
-//     const res = await deleteProductFromDb(id);
-//     deleteItem(id);
-
-//     if (res.success) {
-//       alert("deleted successfully");
-//     } else{
-//         alert("Something went wrong");
-//     }
-//   }
-//   return(
-//     <div>
-//         <button  onClick={handleDelete}>Delete</button>
-//     </div>
-//   )
-// }
-
-
-
-
-
-
-
-
 //@ts-nocheck
 "use client";
 import React from "react";

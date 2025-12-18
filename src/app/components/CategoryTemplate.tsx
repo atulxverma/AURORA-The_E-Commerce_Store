@@ -25,13 +25,11 @@ export default function CategoryTemplate({ title, subtitle, filterType, filterVa
   const [sortOrder, setSortOrder] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // --- MAIN FETCH LOGIC (FIXED) ---
+  // --- FETCH LOGIC (SAME AS BEFORE) ---
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
-        
-        // 1. Fetch Everything in Parallel
         const [prodRes, userRes] = await Promise.all([
             fetch("https://dummyjson.com/products?limit=100"), 
             fetch("/api/me")
@@ -40,7 +38,6 @@ export default function CategoryTemplate({ title, subtitle, filterType, filterVa
         const apiData = await prodRes.json();
         let products = apiData.products || [];
         
-        // 2. Fetch DB Products
         const dbRes = await fetch('/api/product');
         const dbData = await dbRes.json();
         if(dbData.success) {
@@ -48,7 +45,6 @@ export default function CategoryTemplate({ title, subtitle, filterType, filterVa
              products = [...dbProds, ...products];
         }
 
-        // 3. Handle User
         let activeUser = null;
         if (userRes.ok) {
             const uData = await userRes.json();
@@ -56,7 +52,6 @@ export default function CategoryTemplate({ title, subtitle, filterType, filterVa
             setCurrentUser(activeUser);
         }
 
-        // 4. FILTER LOGIC
         if (filterType === "category") {
             products = products.filter((p: any) => {
                 const cat = (p.category || "").toLowerCase();
@@ -65,35 +60,19 @@ export default function CategoryTemplate({ title, subtitle, filterType, filterVa
 
                 if (["smartphones", "laptops", "automotive", "motorcycle", "lighting", "groceries"].includes(cat)) return false;
 
-                if (val === "men") {
-                    return (cat === "mens-shirts" || cat === "mens-shoes" || cat === "mens-watches" || (tit.includes("men") && !tit.includes("women")));
-                }
-                if (val === "women") {
-                    return (cat.includes("women") || cat === "tops" || cat === "skincare" || cat === "fragrances" || tit.includes("lipstick") || tit.includes("mascara") || tit.includes("perfume"));
-                }
-                if (val === "accessories") {
-                    return (cat === "sunglasses" || cat.includes("watch") || cat.includes("jewel") || cat.includes("bag"));
-                }
+                if (val === "men") return (cat === "mens-shirts" || cat === "mens-shoes" || cat === "mens-watches" || (tit.includes("men") && !tit.includes("women")));
+                if (val === "women") return (cat.includes("women") || cat === "tops" || cat === "skincare" || cat === "fragrances" || tit.includes("lipstick") || tit.includes("mascara") || tit.includes("perfume"));
+                if (val === "accessories") return (cat === "sunglasses" || cat.includes("watch") || cat.includes("jewel") || cat.includes("bag"));
                 return cat.includes(val);
             });
         } 
-        else if (filterType === "sale") {
-            products = products.filter((p: any) => p.discountPercentage > 10 || p.price < 50); 
-        }
-        else if (filterType === "new") {
-            products = products.slice(0, 20);
-        }
+        else if (filterType === "sale") products = products.filter((p: any) => p.discountPercentage > 10 || p.price < 50); 
+        else if (filterType === "new") products = products.slice(0, 20);
 
-        // 5. WISHLIST CHECK (CRITICAL FIX)
         if (activeUser) {
-            const wishlistItems = await getWishlist(); // Server Action
-            const likedIds = new Set(wishlistItems.map((w: any) => String(w.productId))); // Ensure String ID match
-            
-            // Update isLiked flag BEFORE setting state
-            products = products.map((p: any) => ({
-                ...p,
-                isLiked: likedIds.has(String(p.id))
-            }));
+            const wishlistItems = await getWishlist();
+            const likedIds = new Set(wishlistItems.map((w: any) => String(w.productId)));
+            products = products.map((p: any) => ({ ...p, isLiked: likedIds.has(String(p.id)) }));
         }
 
         setFilteredProducts(products);
@@ -104,13 +83,10 @@ export default function CategoryTemplate({ title, subtitle, filterType, filterVa
     fetchData();
   }, [filterType, filterValue]);
 
-  // --- LISTENER FOR INSTANT SYNC ---
   useEffect(() => {
     const handleWishlistSync = (e: any) => {
         const { id, status } = e.detail;
-        setFilteredProducts(prev => prev.map(p => 
-            p.id === id ? { ...p, isLiked: status } : p
-        ));
+        setFilteredProducts(prev => prev.map(p => p.id === id ? { ...p, isLiked: status } : p));
     };
     window.addEventListener("wishlist-updated", handleWishlistSync);
     return () => window.removeEventListener("wishlist-updated", handleWishlistSync);
@@ -170,41 +146,36 @@ export default function CategoryTemplate({ title, subtitle, filterType, filterVa
                         <p className="text-sm text-gray-500 mt-2">Check back later for new drops.</p>
                     </div>
                 ) : (
-                    <>
-                        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-12 mb-16">
-                            {currentProducts.map((item, index) => {
-                                const isOwner = currentUser?.id === item.ownerId;
-                                return (
-                                    <FadeIn key={item.id} delay={index * 0.05}>
-                                        <div className="relative group h-full">
-                                            {!isOwner && (
-                                                <div className="absolute top-2 right-2 z-30 transform transition group-hover:scale-110">
-                                                    {/* Using Key to Force Re-render if Liked status changes */}
-                                                    <WishlistButton 
-                                                        key={item.isLiked ? 'liked' : 'unliked'}
-                                                        product={item} 
-                                                        initialLiked={item.isLiked || false} 
-                                                    />
-                                                </div>
-                                            )}
-                                            <ItemCard 
-                                                item={item} 
-                                                deleteItem={isOwner ? () => alert("Go to dashboard to manage") : undefined} 
-                                            />
-                                        </div>
-                                    </FadeIn>
-                                );
-                            })}
-                        </div>
-
-                        {totalPages > 1 && (
-                            <div className="flex justify-center items-center gap-4">
-                                <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="p-3 rounded-full bg-white border border-gray-200 shadow-sm hover:bg-black hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black transition-all"><FiChevronLeft size={20} /></button>
-                                <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Page {currentPage} of {totalPages}</span>
-                                <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} className="p-3 rounded-full bg-white border border-gray-200 shadow-sm hover:bg-black hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black transition-all"><FiChevronRight size={20} /></button>
-                            </div>
-                        )}
-                    </>
+                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-12 mb-16">
+                        {currentProducts.map((item, index) => {
+                            const isOwner = currentUser?.id === item.ownerId;
+                            return (
+                                <FadeIn key={item.id} delay={index * 0.05}>
+                                    
+                                    {/* --- FIX: Parent div par 'group' class nahi lagaenge taaki heart hover pe scale na ho --- */}
+                                    <div className="relative h-full">
+                                        
+                                        {!isOwner && (
+                                            // Heart Button (Fixed Position, No Scale from Parent)
+                                            <div className="absolute top-4 right-4 z-30 transition hover:scale-110">
+                                                <WishlistButton 
+                                                    key={item.isLiked ? 'liked' : 'unliked'}
+                                                    product={item} 
+                                                    initialLiked={item.isLiked || false} 
+                                                />
+                                            </div>
+                                        )}
+                                        
+                                        {/* Card */}
+                                        <ItemCard 
+                                            item={item} 
+                                            deleteItem={isOwner ? () => alert("Go to dashboard to manage") : undefined} 
+                                        />
+                                    </div>
+                                </FadeIn>
+                            );
+                        })}
+                    </div>
                 )}
             </FadeIn>
         </main>

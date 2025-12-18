@@ -4,7 +4,7 @@ import "./globals.css";
 import Header from "./components/Header"; 
 import { getCurrentUser } from "@/lib/auth"; 
 import { BackgroundBeams } from "./components/ui/background-beams"; 
-import Footer from "./components/Footer"; // <--- IMPORT FOOTER
+import Footer from "./components/Footer"; 
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,21 +23,30 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={`${inter.className} relative min-h-screen bg-white selection:bg-black selection:text-white`}>
+      <body className={`${inter.className} min-h-screen bg-white selection:bg-black selection:text-white flex flex-col`}>
         
-        {/* Background */}
-        <div className="fixed inset-0 z-[-1] pointer-events-none">
-            <BackgroundBeams className="opacity-40" />
-        </div>
-
-        {/* Header */}
+        {/* --- HEADER --- */}
         {/* <Header user={user} />  */}
         
-        {/* Main Content */}
-        {children}
+        {/* --- MAIN CONTENT AREA (Contains Background) --- */}
+        <main className="flex-1 relative">
+            
+            {/* Background Beams only inside MAIN, not Footer */}
+            <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+                <BackgroundBeams className="opacity-40 h-full w-full object-cover" />
+            </div>
 
-        {/* Footer (Added at the bottom) */}
-        <Footer /> 
+            {/* Page Content sits on top of beams */}
+            <div className="relative z-10">
+                {children}
+            </div>
+
+        </main>
+
+        {/* --- FOOTER (Outside Main, Solid White) --- */}
+        <div className="relative z-20 bg-white">
+            <Footer /> 
+        </div>
       
       </body>
     </html>
