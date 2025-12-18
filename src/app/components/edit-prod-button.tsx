@@ -27,7 +27,6 @@ export default function EditProdButton({ product }: { product: any }) {
   .filter((val, index, self) => self.indexOf(val) === index);
 
   const [images, setImages] = useState<string[]>(initialImages);
-  
   const [isPending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement | null>(null);
   const urlInputRef = useRef<HTMLInputElement | null>(null);
@@ -60,7 +59,20 @@ export default function EditProdButton({ product }: { product: any }) {
   const handleUpdate = () => {
     const finalImages = images.filter(Boolean);
     const mainImage = finalImages[0] || ""; 
-    const payload = { id: product.id, title, description, price: Number(price), category, tags: tags.split(",").map(t => t.trim()).filter(Boolean), image_url: mainImage, images: finalImages };
+    
+    // --- FIX: Added (t: string) type definition ---
+    const tagArray = tags.split(",").map((t: string) => t.trim()).filter(Boolean);
+
+    const payload = { 
+        id: product.id, 
+        title, 
+        description, 
+        price: Number(price), 
+        category, 
+        tags: tagArray, // Use typed array
+        image_url: mainImage, 
+        images: finalImages 
+    };
 
     startTransition(async () => {
       const res = await updateProductInDb(payload);
@@ -119,7 +131,6 @@ export default function EditProdButton({ product }: { product: any }) {
             e.stopPropagation();
             setOpen(true);
         }}
-        // --- FIXED: Use w-full h-full to fit parent container ---
         className="w-full h-full flex items-center justify-center text-inherit bg-transparent cursor-pointer"
         title="Edit Product"
       >
