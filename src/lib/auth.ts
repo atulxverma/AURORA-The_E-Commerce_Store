@@ -12,8 +12,12 @@ export async function getCurrentUser() {
 
   try {
     const decoded = verifyToken(token);
-    // console.log("✅ AUTH SUCCESS: Decoded User:", decoded);
-    return decoded as { id: string; email: string; username: string };
+
+    return decoded as unknown as {
+      id: string;
+      email: string;
+      username: string;
+    };
   } catch (error) {
     console.log("❌ AUTH FAIL: Invalid Token");
     return null;
