@@ -20,7 +20,8 @@ export default async function OrdersPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <Header user={user} />
+
       
       <div className="max-w-4xl mx-auto px-6 pt-40 pb-20">
         <FadeIn>
