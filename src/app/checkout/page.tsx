@@ -12,7 +12,22 @@ export default function CheckoutPage() {
   });
   
   const [isPending, startTransition] = useTransition();
+  const [currentUser, setCurrentUser] = useState<any>(null); // State for User
   const router = useRouter();
+
+  // --- FIX: Fetch User for Header ---
+  useEffect(() => {
+    async function getUser() {
+        try {
+            const res = await fetch("/api/me");
+            if (res.ok) {
+                const data = await res.json();
+                setCurrentUser(data.user);
+            }
+        } catch (e) { console.error(e); }
+    }
+    getUser();
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +47,9 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      
+      {/* --- FIX: Pass user prop --- */}
+      <Header user={currentUser} />
       
       <div className="max-w-6xl mx-auto px-6 pt-40 pb-20">
         <FadeIn>
