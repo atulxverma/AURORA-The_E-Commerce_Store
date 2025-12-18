@@ -29,6 +29,7 @@ export default function AddProdButton({ onProductAdded }: { onProductAdded?: (it
     setMounted(true);
   }, []);
 
+  // --- FIXED HANDLER SIGNATURE ---
   const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
@@ -71,8 +72,6 @@ export default function AddProdButton({ onProductAdded }: { onProductAdded?: (it
     formData.append("price", String(price));
     formData.append("category", category || "General");
     formData.append("image", finalImages[0]); 
-    // Note: If you want to send tags, you might need to handle it in backend differently
-    // For now, keeping it simple as per backend logic.
 
     startTransition(async () => {
       const res = await addNewProduct(formData);
@@ -99,10 +98,8 @@ export default function AddProdButton({ onProductAdded }: { onProductAdded?: (it
   // --- PORTAL CONTENT ---
   const modalContent = (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      {/* Overlay */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
 
-      {/* Modal */}
       <div className="relative bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
         
         <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-white z-10">
@@ -130,7 +127,10 @@ export default function AddProdButton({ onProductAdded }: { onProductAdded?: (it
             {/* Images */}
             <div className="space-y-5">
                <label className="text-xs font-bold uppercase text-gray-500">Product Images</label>
+               
+               {/* --- FIX: onChange={handleFiles} (No arrow function) --- */}
                <div onClick={() => fileRef.current?.click()} className="border-2 border-dashed border-gray-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-50"><AiOutlineCloudUpload size={40} className="text-gray-400 mb-2" /><p className="font-medium text-gray-600">Click to Upload</p><input ref={fileRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFiles} /></div>
+               
                <div className="flex gap-2"><input ref={urlInputRef} className="flex-1 bg-gray-50 border border-gray-200 p-2 rounded-lg text-sm outline-none" placeholder="Paste Image URL" /><button type="button" onClick={handleAddUrl} className="bg-black text-white px-4 rounded-lg text-sm font-medium">Add</button></div>
                <div className="grid grid-cols-3 gap-3 max-h-60 overflow-y-auto p-1">{addedImages.map((src, i) => (<div key={i} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200"><img src={src} className="w-full h-full object-cover" alt="preview" /><button onClick={() => setAddedImages(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"><FiTrash2 size={12} /></button></div>))}</div>
             </div>

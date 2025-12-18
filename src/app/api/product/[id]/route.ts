@@ -3,20 +3,22 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  // --- FIX: Correct Type for Next 15 ---
+  { params }: { params: Promise<{ id: string }> } 
 ) {
   try {
+    // --- FIX: Await Params ---
     const { id } = await params; 
 
     let product = null;
     
-    // Check DB with Reviews Included
+    // Check DB (24 chars)
     if (id.length === 24) {
       product = await prismaClient.product.findUnique({
         where: { id: id },
         include: {
             reviews: {
-                include: { user: { select: { name: true } } }, // Get Reviewer Name
+                include: { user: { select: { name: true } } },
                 orderBy: { createdAt: 'desc' }
             }
         }
@@ -28,7 +30,6 @@ export async function GET(
       const res = await fetch(`https://dummyjson.com/products/${id}`);
       if (res.ok) {
         product = await res.json();
-        // Dummy products won't have DB reviews, so add empty array
         product.reviews = []; 
       }
     }
