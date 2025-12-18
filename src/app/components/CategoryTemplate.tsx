@@ -146,20 +146,16 @@ export default function CategoryTemplate({ title, subtitle, filterType, filterVa
                                 <p className="text-sm text-gray-500 mt-2">Check back later for new drops.</p>
                             </div>
                         ) : (
-                            // ... imports same ...
-
-                            // Inside return -> map loop:
 
                             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-12">
                                 {currentProducts.map((item, index) => {
-                                    const isOwner = currentUser?.id === item.ownerId;
+                                    const isOwner = currentUser && (currentUser.id === item.ownerId);
+
                                     return (
                                         <FadeIn key={item.id} delay={index * 0.05}>
-                                            {/* FIX: Removed 'group' class here */}
                                             <div className="relative h-full">
                                                 {!isOwner && (
-                                                    // FIX: Spacing top-4 right-4
-                                                    <div className="absolute top-4 right-4 z-30 transition hover:scale-110">
+                                                    <div className="absolute top-4 right-4 z-30 transition hover:scale-110 cursor-pointer">
                                                         <WishlistButton
                                                             key={item.isLiked ? 'liked' : 'unliked'}
                                                             product={item}
@@ -170,6 +166,7 @@ export default function CategoryTemplate({ title, subtitle, filterType, filterVa
 
                                                 <ItemCard
                                                     item={item}
+                                                    // --- FIX: Pass undefined if not owner (so Add to Cart shows) ---
                                                     deleteItem={isOwner ? () => alert("Go to dashboard to manage") : undefined}
                                                 />
                                             </div>
