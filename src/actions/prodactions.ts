@@ -7,9 +7,9 @@ import { redirect } from "next/navigation";
 import nodemailer from "nodemailer";
 
 // ==========================================================
-// 📧 INTERNAL EMAIL HELPER (Embed kiya taaki import issue na aaye)
+// 📧 INTERNAL EMAIL HELPER (Renamed to 'sendEmail')
 // ==========================================================
-const sendEmailInternal = async (to: string, subject: string, html: string) => {
+const sendEmail = async (to: string, subject: string, html: string) => {
   try {
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -68,9 +68,7 @@ export async function addNewProduct(formData: FormData) {
   }
 }
 
-// ==========================================================
 // 2. UPDATE PRODUCT
-// ==========================================================
 export async function updateProductInDb(data: any) {
   try {
     const user = await getCurrentUser();
@@ -100,9 +98,7 @@ export async function updateProductInDb(data: any) {
   }
 }
 
-// ==========================================================
 // 3. DELETE PRODUCT
-// ==========================================================
 export async function deleteProductFromDb(id: string) {
   const user = await getCurrentUser();
   if (!user) return { success: false, message: "Unauthorized" };
@@ -151,9 +147,9 @@ export async function addProductToDb(data: any) {
     }
 }
 
-// ==========================================================
-// 🛒 CART & ORDER (FIXED EMAIL CALL)
-// ==========================================================
+// ==========================================
+// CART & ORDER
+// ==========================================
 
 export async function addProductToCart(productData: any) {
   const user = await getCurrentUser();
@@ -193,6 +189,7 @@ export async function clearCartInDb() {
   return { success: true };
 }
 
+// --- PLACE ORDER (WITH FIXED EMAIL CALL) ---
 export async function placeOrder(formData: any, paymentId?: string) {
   const user = await getCurrentUser();
   if (!user) return { success: false, message: "Login required" };
@@ -211,37 +208,29 @@ export async function placeOrder(formData: any, paymentId?: string) {
       }
     });
 
-    // --- SEND EMAIL (Correct Function Name) ---
     if (user.email) {
-      // Changed from 'sendEmail' to 'sendEmailInternal' to match function above
-      await sendEmailInternal(
+      // --- FIX: Using correct 'sendEmail' function ---
+      await sendEmail(
         user.email,
         "Order Confirmed - AURORA",
-        `
-        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-          <h1 style="color: #000;">AURORA.</h1>
-          <p>Hi ${user.name || "Customer"},</p>
-          <p>Your order has been placed successfully.</p>
+        `<div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h1 style="color: #000;">AURORA.</h1><p>Hi ${user.name || "Customer"},</p><p>Your order has been placed successfully.</p>
           <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p><strong>Order ID:</strong> #${order.id.slice(-6).toUpperCase()}</p>
-          <p><strong>Amount:</strong> ₹${total}</p>
+          <p><strong>Order ID:</strong> #${order.id.slice(-6).toUpperCase()}</p><p><strong>Amount:</strong> ₹${total}</p>
           <p><strong>Status:</strong> ${paymentId ? "Paid Online" : "Processing"}</p>
-        </div>
-        `
+        </div>`
       );
     }
 
     await prismaClient.cart.deleteMany({ where: { userId: user.id } });
     revalidatePath("/orders"); revalidatePath("/cart");
     return { success: true, orderId: order.id };
-  } catch (err: any) {
-    return { success: false, message: err.message };
-  }
+  } catch (err: any) { return { success: false, message: err.message }; }
 }
 
-// ==========================================================
-// 👤 AUTH & PROFILE
-// ==========================================================
+// ==========================================
+// AUTH & PROFILE ACTIONS
+// ==========================================
 
 export async function logoutUser() {
   const cookieStore = await cookies();
