@@ -6,7 +6,9 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import nodemailer from "nodemailer";
 
-// --- INTERNAL EMAIL HELPER ---
+// ==========================================================
+// 📧 INTERNAL EMAIL HELPER (Embed kiya taaki import issue na aaye)
+// ==========================================================
 const sendEmailInternal = async (to: string, subject: string, html: string) => {
   try {
     const transporter = nodemailer.createTransport({
@@ -16,63 +18,99 @@ const sendEmailInternal = async (to: string, subject: string, html: string) => {
         pass: process.env.GMAIL_PASS,
       },
     });
+
     await transporter.sendMail({
       from: `"Aurora Store" <${process.env.GMAIL_USER}>`,
       to,
       subject,
       html,
     });
-    console.log("✅ Email sent");
+    console.log("✅ Email sent successfully");
   } catch (error) {
     console.error("❌ Email failed:", error);
   }
 };
 
-// ... (Add Product, Update Product, Delete Product, Add Product Legacy - SAME AS BEFORE) ...
-// (Main yahan repeat nahi kar raha hu space bachane ke liye, bas placeOrder dikha raha hu)
-
-// --- ADD NEW PRODUCT ---
+// ==========================================================
+// 1. ADD NEW PRODUCT
+// ==========================================================
 export async function addNewProduct(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) return { success: false, message: "Unauthorized" };
+
   const title = formData.get("title") as string;
   const price = parseFloat(formData.get("price") as string);
   const category = formData.get("category") as string;
   const description = formData.get("description") as string;
   const image = formData.get("image") as string;
+
   if (!title || !price) return { success: false, message: "Missing fields" };
+
   try {
     const product = await prismaClient.product.create({
-      data: { title, price, category, description, thumbnail: image || "/placeholder.png", images: [image || "/placeholder.png"], ownerId: user.id },
+      data: {
+        title,
+        price,
+        category,
+        description,
+        thumbnail: image || "/placeholder.png",
+        images: [image || "/placeholder.png"],
+        ownerId: user.id,
+      },
     });
-    revalidatePath("/profile"); revalidatePath("/"); 
+
+    revalidatePath("/profile");
+    revalidatePath("/"); 
     return { success: true, newProduct: product }; 
-  } catch (error: any) { return { success: false, message: "Failed to create product" }; }
+
+  } catch (error: any) {
+    return { success: false, message: "Failed to create product" };
+  }
 }
 
-// --- UPDATE PRODUCT ---
+// ==========================================================
+// 2. UPDATE PRODUCT
+// ==========================================================
 export async function updateProductInDb(data: any) {
   try {
     const user = await getCurrentUser();
     if (!user) return { success: false, message: "Unauthorized" };
+
     const existingProduct = await prismaClient.product.findUnique({ where: { id: data.id } });
     if (!existingProduct) return { success: false, message: "Not found" };
     if (existingProduct.ownerId !== user.id) return { success: false, message: "Not allowed" };
+
     await prismaClient.product.update({
       where: { id: data.id },
-      data: { title: data.title, description: data.description, price: parseFloat(data.price), category: data.category, tags: data.tags || [], thumbnail: data.image_url, images: data.images || [data.image_url] },
+      data: {
+        title: data.title,
+        description: data.description,
+        price: parseFloat(data.price),
+        category: data.category,
+        tags: data.tags || [],
+        thumbnail: data.image_url,
+        images: data.images || [data.image_url],
+      },
     });
-    revalidatePath("/"); return { success: true };
-  } catch (err: any) { return { success: false, message: err.message }; }
+
+    revalidatePath("/");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, message: err.message };
+  }
 }
 
-// --- DELETE PRODUCT ---
+// ==========================================================
+// 3. DELETE PRODUCT
+// ==========================================================
 export async function deleteProductFromDb(id: string) {
   const user = await getCurrentUser();
   if (!user) return { success: false, message: "Unauthorized" };
+
   const product = await prismaClient.product.findUnique({ where: { id } });
   if (!product) return { success: false, message: "Not found" };
   if (product.ownerId !== user.id) return { success: false, message: "You are not the owner!" };
+
   try {
     await prismaClient.$transaction([
         prismaClient.review.deleteMany({ where: { productId: id } }),
@@ -80,50 +118,81 @@ export async function deleteProductFromDb(id: string) {
         prismaClient.wishlist.deleteMany({ where: { productId: id } }),
         prismaClient.product.delete({ where: { id } })
     ]);
-    revalidatePath("/cart"); revalidatePath("/"); return { success: true };
-  } catch (err: any) { return { success: false, message: "Failed to delete item" }; }
+
+    revalidatePath("/cart");
+    revalidatePath("/");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, message: "Failed to delete item" };
+  }
 }
 
-// --- LEGACY ADD ---
+// 4. LEGACY ADD (JSON)
 export async function addProductToDb(data: any) {
     const user = await getCurrentUser();
     if (!user) return { success: false, message: "Login required" };
     try {
       const product = await prismaClient.product.create({
-        data: { title: data.title, description: data.description, price: parseFloat(data.price), category: data.category, thumbnail: data.image_url || "/placeholder.png", images: data.images || [], tags: data.tags || [], ownerId: user.id },
+        data: {
+          title: data.title,
+          description: data.description,
+          price: parseFloat(data.price),
+          category: data.category,
+          thumbnail: data.image_url || "/placeholder.png",
+          images: data.images || [],
+          tags: data.tags || [],
+          ownerId: user.id,
+        },
       });
-      revalidatePath("/"); return { success: true, product };
-    } catch (err: any) { return { success: false, message: err.message }; }
+      revalidatePath("/");
+      return { success: true, product };
+    } catch (err: any) {
+      return { success: false, message: err.message };
+    }
 }
 
-// --- CART ---
+// ==========================================================
+// 🛒 CART & ORDER (FIXED EMAIL CALL)
+// ==========================================================
+
 export async function addProductToCart(productData: any) {
   const user = await getCurrentUser();
   if (!user) return { success: false, message: "Please login" };
   try {
     const prodId = String(productData.id);
     const existingItem = await prismaClient.cart.findFirst({ where: { userId: user.id, productId: prodId } });
-    if (existingItem) { await prismaClient.cart.update({ where: { id: existingItem.id }, data: { quantity: existingItem.quantity + 1 } }); } 
-    else { await prismaClient.cart.create({ data: { userId: user.id, productId: prodId, title: productData.title, description: productData.description || "", price: parseFloat(productData.price), image_url: productData.thumbnail || "", quantity: 1 } }); }
-    revalidatePath("/cart"); return { success: true };
+    if (existingItem) {
+      await prismaClient.cart.update({ where: { id: existingItem.id }, data: { quantity: existingItem.quantity + 1 } });
+    } else {
+      await prismaClient.cart.create({
+        data: { userId: user.id, productId: prodId, title: productData.title, description: productData.description || "", price: parseFloat(productData.price), image_url: productData.thumbnail || "", quantity: 1 },
+      });
+    }
+    revalidatePath("/cart");
+    return { success: true };
   } catch (err: any) { return { success: false, message: err.message }; }
 }
+
 export async function updateQuantity(id: string, quantity: number) {
   if (quantity < 1) return deleteProductFromCart(id);
   await prismaClient.cart.update({ where: { id }, data: { quantity } });
-  revalidatePath("/cart"); return { success: true };
+  revalidatePath("/cart");
+  return { success: true };
 }
+
 export async function deleteProductFromCart(id: string) {
   await prismaClient.cart.delete({ where: { id } });
-  revalidatePath("/cart"); return { success: true };
+  revalidatePath("/cart");
+  return { success: true };
 }
+
 export async function clearCartInDb() {
   const user = await getCurrentUser();
   if (user) await prismaClient.cart.deleteMany({ where: { userId: user.id } });
-  revalidatePath("/cart"); return { success: true };
+  revalidatePath("/cart");
+  return { success: true };
 }
 
-// --- PLACE ORDER (FIXED EMAIL CALL) ---
 export async function placeOrder(formData: any, paymentId?: string) {
   const user = await getCurrentUser();
   if (!user) return { success: false, message: "Login required" };
@@ -131,6 +200,7 @@ export async function placeOrder(formData: any, paymentId?: string) {
   try {
     const cartItems = await prismaClient.cart.findMany({ where: { userId: user.id } });
     if (cartItems.length === 0) return { success: false, message: "Cart empty" };
+
     const total = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
     const order = await prismaClient.order.create({
@@ -138,36 +208,49 @@ export async function placeOrder(formData: any, paymentId?: string) {
         userId: user.id, fullName: formData.fullName, address: formData.address, city: formData.city, zipCode: formData.zipCode, country: formData.country, totalAmount: total,
         status: paymentId ? "Paid" : "Processing", paymentId: paymentId || null,
         items: { create: cartItems.map(item => ({ productId: item.productId, title: item.title, price: item.price, quantity: item.quantity, image_url: item.image_url })) }
-      },
+      }
     });
 
+    // --- SEND EMAIL (Correct Function Name) ---
     if (user.email) {
-      // --- FIX: Using sendEmailInternal ---
+      // Changed from 'sendEmail' to 'sendEmailInternal' to match function above
       await sendEmailInternal(
         user.email,
         "Order Confirmed - AURORA",
-        `<div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-          <h1 style="color: #000;">AURORA.</h1><p>Hi ${user.name || "Customer"},</p><p>Your order has been placed successfully.</p>
+        `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h1 style="color: #000;">AURORA.</h1>
+          <p>Hi ${user.name || "Customer"},</p>
+          <p>Your order has been placed successfully.</p>
           <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p><strong>Order ID:</strong> #${order.id.slice(-6).toUpperCase()}</p><p><strong>Amount:</strong> ₹${total}</p>
+          <p><strong>Order ID:</strong> #${order.id.slice(-6).toUpperCase()}</p>
+          <p><strong>Amount:</strong> ₹${total}</p>
           <p><strong>Status:</strong> ${paymentId ? "Paid Online" : "Processing"}</p>
-        </div>`
+        </div>
+        `
       );
     }
 
     await prismaClient.cart.deleteMany({ where: { userId: user.id } });
     revalidatePath("/orders"); revalidatePath("/cart");
     return { success: true, orderId: order.id };
-  } catch (err: any) { return { success: false, message: err.message }; }
+  } catch (err: any) {
+    return { success: false, message: err.message };
+  }
 }
 
-// --- AUTH/PROFILE ---
+// ==========================================================
+// 👤 AUTH & PROFILE
+// ==========================================================
+
 export async function logoutUser() {
   const cookieStore = await cookies();
   cookieStore.delete("token");
   redirect("/login");
 }
+
 export async function deleteAccount() { return deleteUserAccount(); }
+
 export async function deleteUserAccount() {
   const user = await getCurrentUser();
   if (!user) return { success: false, message: "Not logged in" };
@@ -175,14 +258,17 @@ export async function deleteUserAccount() {
     const userOrders = await prismaClient.order.findMany({ where: { userId: user.id }, select: { id: true } });
     const orderIds = userOrders.map((o) => o.id);
     await prismaClient.$transaction([
-      prismaClient.orderItem.deleteMany({ where: { orderId: { in: orderIds } } }), prismaClient.order.deleteMany({ where: { userId: user.id } }), prismaClient.cart.deleteMany({ where: { userId: user.id } }),
-      prismaClient.wishlist.deleteMany({ where: { userId: user.id } }), prismaClient.product.deleteMany({ where: { ownerId: user.id } }), prismaClient.user.delete({ where: { id: user.id } }),
+      prismaClient.orderItem.deleteMany({ where: { orderId: { in: orderIds } } }),
+      prismaClient.order.deleteMany({ where: { userId: user.id } }),
+      prismaClient.cart.deleteMany({ where: { userId: user.id } }),
+      prismaClient.wishlist.deleteMany({ where: { userId: user.id } }),
+      prismaClient.product.deleteMany({ where: { ownerId: user.id } }),
+      prismaClient.user.delete({ where: { id: user.id } }),
     ]);
     const cookieStore = await cookies(); cookieStore.delete("token"); return { success: true };
   } catch (err: any) { return { success: false, message: err.message }; }
 }
 
-// --- WISHLIST/REVIEW ---
 export async function toggleWishlist(product: any) {
   const user = await getCurrentUser();
   if (!user) return { success: false, message: "Login required" };
@@ -193,11 +279,13 @@ export async function toggleWishlist(product: any) {
     else { await prismaClient.wishlist.create({ data: { userId: user.id, productId: prodId, title: product.title, price: parseFloat(product.price), image_url: product.thumbnail || product.image_url || "" } }); revalidatePath("/"); return { success: true, action: "added" }; }
   } catch (err) { return { success: false, message: "Failed" }; }
 }
+
 export async function getWishlist() {
   const user = await getCurrentUser();
   if (!user) return [];
   return await prismaClient.wishlist.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" } });
 }
+
 export async function addReview(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) return { success: false, message: "Please login" };
