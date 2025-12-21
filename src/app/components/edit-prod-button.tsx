@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FiEdit, FiX, FiTrash2 } from "react-icons/fi";
 import { AiOutlineCloudUpload } from "react-icons/ai";
 import { updateProductInDb } from "@/actions/prodactions";
+import { toast } from "sonner";
 
 export default function EditProdButton({ product }: { product: any }) {
   const [open, setOpen] = useState(false);
@@ -77,10 +78,15 @@ export default function EditProdButton({ product }: { product: any }) {
     startTransition(async () => {
       const res = await updateProductInDb(payload);
       if (res.success) {
-        alert("Product Updated!"); setOpen(false);
+        setOpen(false);
         if (typeof window !== "undefined") window.dispatchEvent(new Event("product-updated"));
+        
+        toast.success("Changes Saved", { description: "Product updated successfully." }); // <---
+        
         router.refresh();
-      } else { alert(res.message || "Update Failed"); }
+      } else { 
+        toast.error("Update Failed", { description: res.message }); // <---
+      }
     });
   };
 

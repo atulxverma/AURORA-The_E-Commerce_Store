@@ -1,10 +1,12 @@
 "use client";
-import React, { useTransition } from "react";
+import React, { useState, useTransition } from "react";
 import { addProductToCart } from "@/actions/prodactions";
-import { FiShoppingBag, FiLoader } from "react-icons/fi";
+import { FiShoppingBag, FiLoader, FiCheck } from "react-icons/fi";
+import { toast } from "sonner"; 
 
 export default function AddToCart({ item }: { item: any }) {
   const [isPending, startTransition] = useTransition();
+  const [added, setAdded] = useState(false);
 
   function handleAdd(e: React.MouseEvent) {
     e.preventDefault(); 
@@ -21,8 +23,18 @@ export default function AddToCart({ item }: { item: any }) {
       };
 
       const res = await addProductToCart(payload);
-      if (res.success) console.log("Added!");
-      else alert("Error: " + res.message);
+      
+      if (res.success) {
+        setAdded(true);
+        // --- PREMIUM TOAST ---
+        toast.success(`${item.title} added to cart!`, {
+            description: "Go to cart to complete checkout.",
+            duration: 3000,
+        });
+        setTimeout(() => setAdded(false), 2000);
+      } else {
+        toast.error("Failed to add", { description: res.message });
+      }
     });
   }
 

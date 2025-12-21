@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  
   try {
     // 1. Fetch Local DB Products (Latest first)
     const dbProductsPromise = prismaClient.product.findMany({

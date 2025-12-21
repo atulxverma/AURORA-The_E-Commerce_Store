@@ -5,11 +5,15 @@ import Header from "../components/Header";
 import ItemCard from "../components/Item-card";
 import { deleteProductFromDb, getWishlist } from "@/actions/prodactions";
 import WishlistButton from "../components/wishlist-button";
-import FadeIn from "../components/FadeIn";
-import FilterModal from "../components/FilterModal";
+import FadeIn from "../components/FadeIn"; 
+import FilterModal from "../components/FilterModal"; 
 import SkeletonCard from "../components/SkeletonCard";
-import { FiArrowRight, FiBox, FiGlobe, FiShield, FiTruck, FiMapPin, FiLock } from "react-icons/fi";
-import { AuroraBackground } from "../components/ui/aurora-background";
+import { FiArrowRight, FiBox, FiGlobe, FiShield, FiTruck, FiLock, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { AuroraBackground } from "../components/ui/aurora-background"; 
+import { toast } from "sonner";
+
+// --- CONFIGURATION ---
+const ITEMS_PER_PAGE = 20; // 5 Rows of 4 Items (Perfect Grid)
 
 // --- ROTATING TEXT ---
 const RotatingText = () => {
@@ -32,6 +36,9 @@ export default function Home() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [userLoading, setUserLoading] = useState(true);
+  
+  // --- PAGINATION STATE ---
+  const [currentPage, setCurrentPage] = useState(1);
 
   // --- DATA FETCHING ---
   const fetchData = useCallback(async () => {
@@ -45,21 +52,21 @@ export default function Home() {
       let activeUser = null;
 
       if (userRes.ok) {
-        const uData = await userRes.json();
-        activeUser = uData.user;
-        setCurrentUser(activeUser);
+          const uData = await userRes.json();
+          activeUser = uData.user;
+          setCurrentUser(activeUser);
       }
       setUserLoading(false);
 
       if (prodData.success) {
-        let prods = prodData.products || [];
-        if (activeUser) {
-          const wishlistItems = await getWishlist();
-          const likedIds = new Set(wishlistItems.map((w: any) => w.productId));
-          prods = prods.map((p: any) => ({ ...p, isLiked: likedIds.has(p.id) }));
-        }
-        setAllProducts(prods);
-        setFilteredProducts(prods);
+          let prods = prodData.products || [];
+          if (activeUser) {
+              const wishlistItems = await getWishlist();
+              const likedIds = new Set(wishlistItems.map((w: any) => w.productId));
+              prods = prods.map((p: any) => ({ ...p, isLiked: likedIds.has(p.id) }));
+          }
+          setAllProducts(prods);
+          setFilteredProducts(prods);
       }
     } catch (error) {
       console.error("Error:", error);
@@ -71,23 +78,23 @@ export default function Home() {
 
   // --- LISTENERS ---
   useEffect(() => {
-    fetchData();
-
+    fetchData(); 
+    
     const handleOptimisticAdd = (e: any) => {
-      const newProduct = e.detail;
-      if (newProduct) {
-        setAllProducts(prev => [newProduct, ...prev]);
-        setFilteredProducts(prev => [newProduct, ...prev]);
-      }
+        const newProduct = e.detail; 
+        if(newProduct) {
+            setAllProducts(prev => [newProduct, ...prev]);
+            setFilteredProducts(prev => [newProduct, ...prev]);
+        }
     };
 
     const handleWishlistSync = (e: any) => {
-      const { id, status } = e.detail;
-      const updateList = (list: any[]) => list.map(p =>
-        p.id === id ? { ...p, isLiked: status } : p
-      );
-      setAllProducts(prev => updateList(prev));
-      setFilteredProducts(prev => updateList(prev));
+        const { id, status } = e.detail;
+        const updateList = (list: any[]) => list.map(p => 
+            p.id === id ? { ...p, isLiked: status } : p
+        );
+        setAllProducts(prev => updateList(prev));
+        setFilteredProducts(prev => updateList(prev));
     };
 
     const handleRefresh = () => fetchData();
@@ -95,7 +102,7 @@ export default function Home() {
     window.addEventListener("product-added-optimistic", handleOptimisticAdd);
     window.addEventListener("product-updated", handleRefresh);
     window.addEventListener("wishlist-updated", handleWishlistSync);
-
+    
     return () => {
       window.removeEventListener("product-added-optimistic", handleOptimisticAdd);
       window.removeEventListener("product-updated", handleRefresh);
@@ -110,18 +117,65 @@ export default function Home() {
     if (filters.min || filters.max) result = result.filter(p => p.price >= filters.min && p.price <= filters.max);
     if (filters.sort === "asc") result.sort((a, b) => a.price - b.price);
     if (filters.sort === "desc") result.sort((a, b) => b.price - a.price);
+    
     setFilteredProducts(result);
+    setCurrentPage(1); // Reset page on filter change
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this product permanently?")) return;
-    const updateList = (prev: any[]) => prev.filter((p) => p.id !== id);
-    setAllProducts(updateList);
-    setFilteredProducts(updateList);
-    const res = await deleteProductFromDb(id);
-    if (!res.success) { alert(res.message); fetchData(); }
+       const handleDelete = (id: string) => {
+    // 1. Show Confirmation Toast
+    toast.custom((t) => (
+      <div className="bg-white p-4 rounded-2xl shadow-2xl border border-gray-100 w-72">
+        <h3 className="font-bold text-gray-900 mb-1">Delete Product?</h3>
+        <p className="text-xs text-gray-500 mb-4">This action cannot be undone.</p>
+        
+        <div className="flex gap-2">
+          <button 
+            onClick={() => toast.dismiss(t)}
+            className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-xl text-xs font-bold hover:bg-gray-200 transition"
+          >
+            Cancel
+          </button>
+          
+          <button 
+            onClick={() => {
+                toast.dismiss(t);
+                performDelete(id); // Call actual delete logic
+            }}
+            className="flex-1 bg-red-600 text-white py-2 rounded-xl text-xs font-bold hover:bg-red-700 transition"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity }); // Don't auto close until clicked
   };
 
+  // 2. Actual Delete Function
+  const performDelete = async (id: string) => {
+    // Show Loading Toast
+    const toastId = toast.loading("Deleting product...");
+
+    try {
+        const res = await deleteProductFromDb(id);
+
+        if (res.success) {
+            // Success: Update UI
+            const updateList = (prev: any[]) => prev.filter((p) => p.id !== id);
+            setAllProducts(updateList);
+            setFilteredProducts(updateList);
+            
+            toast.success("Product deleted successfully", { id: toastId });
+        } else {
+            // Server Error
+            toast.error(res.message || "Failed to delete", { id: toastId });
+        }
+    } catch (error) {
+        // Network Error
+        console.error(error);
+        toast.error("Something went wrong", { id: toastId });
+    }
+  };
   const getDisplayName = () => {
     if (!currentUser) return "";
     return currentUser.name || currentUser.username || "User";
@@ -134,9 +188,23 @@ export default function Home() {
     if (section) section.scrollIntoView({ behavior: "smooth" });
   };
 
+  // --- PAGINATION LOGIC ---
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const currentProducts = filteredProducts.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+        setCurrentPage(newPage);
+        scrollToProducts();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white selection:bg-black selection:text-white overflow-x-hidden">
-
+      
       {/* GLOBAL STYLES */}
       <style jsx global>{`
         @keyframes marquee { 0% { transform: translateX(0%); } 100% { transform: translateX(-100%); } }
@@ -148,126 +216,95 @@ export default function Home() {
 
       {/* --- HERO SECTION --- */}
       <AuroraBackground className="h-[90vh]">
-        <FadeIn className="relative z-10 text-center max-w-5xl mx-auto flex flex-col items-center pt-28 px-6">
+         <FadeIn className="relative z-10 text-center max-w-5xl mx-auto flex flex-col items-center pt-28 px-6">
+            
+            {userLoading ? (
+                <div className="h-12 w-64 bg-white/50 rounded-full animate-pulse mb-8 border border-white/20"></div>
+            ) : currentUser ? (
+                <div className="inline-flex items-center gap-3 bg-white/80 backdrop-blur-md border border-white/50 px-6 py-3 rounded-full shadow-xl mb-8 hover:scale-105 transition-transform cursor-default">
+                    <div className="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center text-sm font-bold">{getInitial()}</div>
+                    <span className="text-sm font-bold text-gray-800">Welcome back, <span className="text-black font-black text-base ml-1">{getDisplayName()}</span></span>
+                </div>
+            ) : (
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-md border border-white/50 shadow-sm mb-8">
+                    <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>
+                    <span className="text-xs font-bold tracking-wider uppercase text-gray-600">New Collection 2026</span>
+                </div>
+            )}
 
-          {userLoading ? (
-            <div className="h-12 w-64 bg-white/50 rounded-full animate-pulse mb-8 border border-white/20"></div>
-          ) : currentUser ? (
-            <div className="inline-flex items-center gap-3 bg-white/80 backdrop-blur-md border border-white/50 px-6 py-3 rounded-full shadow-xl mb-8 hover:scale-105 transition-transform cursor-default">
-              <div className="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center text-sm font-bold">{getInitial()}</div>
-              <span className="text-sm font-bold text-gray-800">Welcome back, <span className="text-black font-black text-base ml-1">{getDisplayName()}</span></span>
+            <div className="text-6xl md:text-9xl font-black tracking-tighter mb-6 text-gray-900 leading-[0.9]">
+                DEFINING <br className="hidden md:block"/>
+                <RotatingText />
             </div>
-          ) : (
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-md border border-white/50 shadow-sm mb-8">
-              <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>
-              <span className="text-xs font-bold tracking-wider uppercase text-gray-600">New Collection 2026</span>
+            
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10 font-medium leading-relaxed">
+                Experience the future of e-commerce. Curated, exclusive, and designed for the modern aesthetic.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center w-full sm:w-auto">
+                <button 
+                    onClick={scrollToProducts}
+                    className="bg-black text-white px-10 py-5 rounded-full font-bold text-lg hover:scale-105 transition shadow-2xl flex items-center justify-center gap-2 group cursor-pointer"
+                >
+                    Shop Now <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
+                </button>
+                <Link href="/lookbook">
+                    <button className="bg-white/80 backdrop-blur-sm text-black border border-white/50 px-10 py-5 rounded-full font-bold text-lg hover:bg-white transition shadow-sm cursor-pointer hover:scale-105">
+                        View Lookbook
+                    </button>
+                </Link>
             </div>
-          )}
-
-          <div className="text-6xl md:text-9xl font-black tracking-tighter mb-6 text-gray-900 leading-[0.9]">
-            DEFINING <br className="hidden md:block" />
-            <RotatingText />
-          </div>
-
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10 font-medium leading-relaxed">
-            Experience the future of e-commerce. Curated, exclusive, and designed for the modern aesthetic.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center w-full sm:w-auto">
-            <button
-              onClick={scrollToProducts}
-              className="bg-black text-white px-10 py-5 rounded-full font-bold text-lg hover:scale-105 transition shadow-2xl flex items-center gap-2"
-            >
-              Shop Now →
-            </button>
-
-            <Link href="/lookbook">
-              <button className="bg-white/80 backdrop-blur-sm text-black border border-white/50 px-10 py-5 rounded-full font-bold text-lg hover:bg-white transition shadow-sm cursor-pointer hover:scale-105 transition">
-                View Lookbook
-              </button>
-            </Link>
-          </div>
-        </FadeIn>
+         </FadeIn>
       </AuroraBackground>
 
       {/* --- MARQUEE --- */}
       <div className="mt-20 bg-black text-white py-4 overflow-hidden border-y border-black relative flex z-20">
-        <div className="animate-marquee whitespace-nowrap flex gap-8">
-          {[1, 2, 3, 4].map((i) => (
-            <React.Fragment key={i}>
-              <span className="font-bold uppercase tracking-widest text-sm">Free Shipping Worldwide</span> •
-              <span className="font-bold uppercase tracking-widest text-sm">30-Day Returns</span> •
-              <span className="font-bold uppercase tracking-widest text-sm">Secure Payment</span> •
-              <span className="font-bold uppercase tracking-widest text-sm">New Arrivals Daily</span> •
-            </React.Fragment>
-          ))}
-        </div>
+          <div className="animate-marquee whitespace-nowrap flex gap-8">
+              {[1, 2, 3, 4].map((i) => (
+                  <React.Fragment key={i}>
+                      <span className="font-bold uppercase tracking-widest text-sm">Free Shipping Worldwide</span> • 
+                      <span className="font-bold uppercase tracking-widest text-sm">30-Day Returns</span> • 
+                      <span className="font-bold uppercase tracking-widest text-sm">Secure Payment</span> • 
+                      <span className="font-bold uppercase tracking-widest text-sm">New Arrivals Daily</span> • 
+                  </React.Fragment>
+              ))}
+          </div>
       </div>
 
-      {/* --- DYNAMIC PREMIUM FEATURES GRID --- */}
+      {/* --- FEATURES GRID --- */}
       <section className="max-w-7xl mx-auto px-6 py-32">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-
-          {/* CARD 1: Delivery (Hover: Truck Moves) */}
-          <div className="group relative bg-white border border-gray-100 p-10 rounded-[3rem] h-96 flex flex-col justify-between overflow-hidden hover:shadow-2xl hover:shadow-blue-50 transition-all duration-500 cursor-default">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-[80px] -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-
-            <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center text-black group-hover:bg-blue-600 group-hover:text-white transition-all duration-500 z-10 shadow-sm group-hover:shadow-blue-200">
-              <FiTruck size={28} className="group-hover:translate-x-1 transition-transform" />
-            </div>
-
-            <div className="relative z-10">
-              <h3 className="text-3xl font-black text-gray-900 tracking-tight mb-2">Superfast <br /> Delivery.</h3>
-              <p className="text-gray-500 font-medium group-hover:text-gray-700 transition-colors">Doorstep delivery within 24 hours in select metro cities.</p>
-            </div>
-
-            <span className="absolute -bottom-4 -right-4 text-9xl font-black text-gray-50 select-none group-hover:text-blue-50 transition-colors duration-500">24</span>
-          </div>
-
-          {/* CARD 2: Global (Hover: Globe Spins & Glows) */}
-          <div className="group relative bg-[#0F0F0F] p-10 rounded-[3rem] h-96 flex flex-col justify-between overflow-hidden hover:-translate-y-2 transition-transform duration-500 shadow-2xl cursor-default">
-            <div className="absolute inset-0 bg-grid-pattern opacity-20 group-hover:opacity-40 transition-opacity duration-700"></div>
-            <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-blue-900/60 to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-            <div className="relative z-10 flex justify-between items-start">
-              <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-white group-hover:rotate-[360deg] transition-transform duration-[1.5s] border border-white/10 shadow-lg shadow-blue-900/20">
-                <FiGlobe size={28} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Card 1 */}
+              <div className="group relative bg-white border border-gray-100 p-10 rounded-[3rem] h-96 flex flex-col justify-between overflow-hidden hover:shadow-2xl hover:shadow-blue-50 transition-all duration-500 cursor-default">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-[80px] -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                  <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center text-black group-hover:bg-blue-600 group-hover:text-white transition-all duration-500 z-10 shadow-sm group-hover:shadow-blue-200"><FiTruck size={28} className="group-hover:translate-x-1 transition-transform" /></div>
+                  <div className="relative z-10"><h3 className="text-3xl font-black text-gray-900 tracking-tight mb-2">Superfast <br /> Delivery.</h3><p className="text-gray-500 font-medium group-hover:text-gray-700 transition-colors">Doorstep delivery within 24 hours.</p></div>
+                  <span className="absolute -bottom-4 -right-4 text-9xl font-black text-gray-50 select-none group-hover:text-blue-50 transition-colors duration-500">24</span>
               </div>
-              <div className="flex items-center gap-2 bg-white/5 px-3 py-1 rounded-full border border-white/5 backdrop-blur-sm group-hover:bg-white/10 transition-colors">
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                <span className="text-[10px] font-bold text-white uppercase tracking-wider">Live</span>
+              {/* Card 2 */}
+              <div className="group relative bg-[#0F0F0F] p-10 rounded-[3rem] h-96 flex flex-col justify-between overflow-hidden hover:-translate-y-2 transition-transform duration-500 shadow-2xl cursor-default">
+                  <div className="absolute inset-0 bg-grid-pattern opacity-20 group-hover:opacity-40 transition-opacity duration-700"></div>
+                  <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-blue-900/60 to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="relative z-10 flex justify-between items-start">
+                    <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-white group-hover:rotate-[360deg] transition-transform duration-[1.5s] border border-white/10 shadow-lg shadow-blue-900/20"><FiGlobe size={28} /></div>
+                    <div className="flex items-center gap-2 bg-white/5 px-3 py-1 rounded-full border border-white/5 backdrop-blur-sm group-hover:bg-white/10 transition-colors"><span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span><span className="text-[10px] font-bold text-white uppercase tracking-wider">Live</span></div>
+                  </div>
+                  <div className="relative z-10"><h3 className="text-3xl font-black text-white tracking-tight mb-2">Shipping <br /> Global.</h3><p className="text-gray-400 font-medium group-hover:text-gray-300 transition-colors">We ship to over 100+ countries.</p></div>
               </div>
-            </div>
-
-            <div className="relative z-10">
-              <h3 className="text-3xl font-black text-white tracking-tight mb-2">Shipping <br /> Global.</h3>
-              <p className="text-gray-400 font-medium group-hover:text-gray-300 transition-colors">We ship to over 100+ countries with tracked logistics.</p>
-            </div>
+              {/* Card 3 */}
+              <div className="group relative bg-[#F4F4F5] p-10 rounded-[3rem] h-96 flex flex-col justify-between overflow-hidden hover:bg-gray-200 transition-colors duration-500 cursor-default">
+                  <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-black shadow-sm group-hover:scale-110 transition-transform duration-500 z-10 relative"><FiShield size={28} className="absolute transition-opacity duration-300 group-hover:opacity-0" /><FiLock size={28} className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-green-600" /></div>
+                  <div className="relative z-10"><h3 className="text-3xl font-black text-gray-900 tracking-tight mb-2">100% Secure <br /> Payment.</h3><p className="text-gray-500 font-medium">Encrypted transactions.</p></div>
+                  <div className="absolute -bottom-10 -right-10 w-40 h-40 border-[16px] border-white rounded-full opacity-50 group-hover:scale-125 transition-transform duration-700"></div>
+              </div>
           </div>
-
-          {/* CARD 3: Secure (Hover: Shield Glow & Lock Icon) */}
-          <div className="group relative bg-[#F4F4F5] p-10 rounded-[3rem] h-96 flex flex-col justify-between overflow-hidden hover:bg-gray-200 transition-colors duration-500 cursor-default">
-            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-black shadow-sm group-hover:scale-110 transition-transform duration-500 z-10 relative">
-              <FiShield size={28} className="absolute transition-opacity duration-300 group-hover:opacity-0" />
-              <FiLock size={28} className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-green-600" />
-            </div>
-
-            <div className="relative z-10">
-              <h3 className="text-3xl font-black text-gray-900 tracking-tight mb-2">100% Secure <br /> Payment.</h3>
-              <p className="text-gray-500 font-medium">Encrypted transactions with Razorpay & Stripe support.</p>
-            </div>
-
-            <div className="absolute -bottom-10 -right-10 w-40 h-40 border-[16px] border-white rounded-full opacity-50 group-hover:scale-125 transition-transform duration-700"></div>
-          </div>
-
-        </div>
       </section>
 
-      {/* --- PRODUCTS GRID --- */}
+      {/* --- PRODUCTS GRID (WITH PAGINATION) --- */}
       <main id="products-section" className="max-w-7xl mx-auto px-6 pb-32">
         <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-16 gap-6">
-          <FadeIn><div className="border-l-4 border-black pl-6 py-2"><h2 className="text-4xl md:text-6xl font-black text-gray-900 tracking-tighter leading-none">LATEST <br /> <span className="text-gray-300">DROPS.</span></h2></div></FadeIn>
-          <div className="w-full md:w-auto"><FilterModal onApply={handleFilter} /></div>
+            <FadeIn><div className="border-l-4 border-black pl-6 py-2"><h2 className="text-4xl md:text-6xl font-black text-gray-900 tracking-tighter leading-none">LATEST <br /> <span className="text-gray-300">DROPS.</span></h2></div></FadeIn>
+            <div className="w-full md:w-auto"><FilterModal onApply={handleFilter} /></div>
         </div>
 
         {loading ? (
@@ -275,28 +312,56 @@ export default function Home() {
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-32 border-2 border-dashed border-gray-200 rounded-[3rem]"><p className="text-xl text-gray-400 font-bold">No products found.</p><button onClick={() => window.location.reload()} className="text-black underline mt-2 font-bold">Reset All</button></div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-16">
-            {filteredProducts.map((item, index) => {
-              const isOwner = currentUser?.id === item.ownerId;
-              return (
-                <FadeIn key={item.id} delay={index * 0.05}>
-                  <div className="relative group h-full">
-                    {!isOwner && (
-                      // --- FIXED: Wishlist Spacing (top-4 right-4) ---
-                      <div className="absolute top-4 right-4 z-30 transform transition hover:scale-110">
-                        <WishlistButton
-                          key={item.isLiked ? 'liked' : 'unliked'}
-                          product={item}
-                          initialLiked={item.isLiked || false}
-                        />
-                      </div>
-                    )}
-                    <ItemCard item={item} deleteItem={isOwner ? handleDelete : undefined} />
-                  </div>
-                </FadeIn>
-              );
-            })}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-16">
+                {currentProducts.map((item, index) => {
+                const isOwner = currentUser?.id === item.ownerId;
+                return (
+                    <FadeIn key={item.id} delay={index * 0.05}>
+                        <div className="relative group h-full">
+                            {!isOwner && (
+                                <div className="absolute top-4 right-4 z-30 transform transition hover:scale-110">
+                                    <WishlistButton 
+                                        key={item.isLiked ? 'liked' : 'unliked'}
+                                        product={item} 
+                                        initialLiked={item.isLiked || false} 
+                                    />
+                                </div>
+                            )}
+                            <ItemCard item={item} deleteItem={isOwner ? handleDelete : undefined} 
+                            />
+                        </div>
+                    </FadeIn>
+                );
+                })}
+            </div>
+
+            {/* --- PAGINATION CONTROLS --- */}
+            {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-6 mt-24">
+                    <button 
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="p-4 rounded-full bg-white border border-gray-200 shadow-lg hover:bg-black hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-gray-300 transition-all cursor-pointer"
+                    >
+                        <FiChevronLeft size={24} />
+                    </button>
+                    
+                    <span className="text-sm font-black text-gray-900 tracking-widest bg-gray-50 px-6 py-3 rounded-full border border-gray-100">
+                        PAGE {currentPage} / {totalPages}
+                    </span>
+
+                    <button 
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="p-4 rounded-full bg-white border border-gray-200 shadow-lg hover:bg-black hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-gray-300 transition-all cursor-pointer"
+                    >
+                        <FiChevronRight size={24} />
+                    </button>
+                </div>
+                
+            )}
+          </>
         )}
       </main>
     </div>

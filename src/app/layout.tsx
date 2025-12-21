@@ -5,6 +5,7 @@ import Header from "./components/Header";
 import { getCurrentUser } from "@/lib/auth"; 
 import { BackgroundBeams } from "./components/ui/background-beams"; 
 import Footer from "./components/Footer"; 
+import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -47,6 +48,7 @@ export default async function RootLayout({
         <div className="relative z-20 bg-white">
             <Footer /> 
         </div>
+        <Toaster position="top-center" richColors closeButton theme="light" />
       
       </body>
     </html>

@@ -15,6 +15,7 @@ import {
 } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import FadeIn from "../../components/FadeIn";
+import { toast } from "sonner";
 
 /* ================= TYPES ================= */
 
@@ -64,10 +65,20 @@ export default function CartClient({
   /* ================= HANDLERS ================= */
 
   const handleRemove = async (id: string) => {
-    startTransition(() => addOptimisticCart({ action: "delete", id }));
-    await deleteProductFromCart(id);
-    router.refresh();
-  };
+  startTransition(() =>
+    addOptimisticCart({ action: "delete", id })
+  );
+  await toast.promise(
+    deleteProductFromCart(id),
+    {
+      loading: "Removing item...",
+      success: "Item removed from cart",
+      error: "Failed to remove item",
+    }
+  );
+  router.refresh();
+};
+
 
   const handleQty = async (id: string, qty: number) => {
     // — If qty < 1 → REMOVE item —
@@ -82,12 +93,23 @@ export default function CartClient({
   };
 
   const handleClear = async () => {
-    if (!confirm("Clear your entire cart?")) return;
-
-    startTransition(() => addOptimisticCart({ action: "clear" }));
-    await clearCartInDb();
-    router.refresh();
-  };
+      // Custom Confirm Toast
+      toast.custom((t) => (
+        <div className="bg-white p-4 rounded-xl shadow-xl border border-gray-100 w-64">
+            <p className="text-sm font-bold mb-3">Clear entire cart?</p>
+            <div className="flex gap-2">
+                <button onClick={() => toast.dismiss(t)} className="flex-1 bg-gray-100 text-xs font-bold py-2 rounded-lg">Cancel</button>
+                <button onClick={async () => {
+                    toast.dismiss(t);
+                    startTransition(() => addOptimisticCart({ action: 'clear' }));
+                    await clearCartInDb();
+                    router.refresh();
+                    toast.success("Cart Cleared");
+                }} className="flex-1 bg-red-500 text-white text-xs font-bold py-2 rounded-lg">Clear</button>
+            </div>
+        </div>
+      ));
+  }
 
   /* ================= CALCULATIONS ================= */
 

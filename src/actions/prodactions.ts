@@ -95,15 +95,28 @@ export async function deleteProductFromDb(id: string) {
   }
 
   try {
-    // 1. Clean up Cart
-    await prismaClient.cart.deleteMany({
-      where: {
-        productId: id,
-      },
-    });
+    // --- FIX: TRANSACTION (Delete Reviews -> Cart -> Product) ---
+    await prismaClient.$transaction([
+        // 1. Delete associated Reviews first (To fix P2014 error)
+        prismaClient.review.deleteMany({
+            where: { productId: id }
+        }),
+        
+        // 2. Delete from Carts
+        prismaClient.cart.deleteMany({
+            where: { productId: id }
+        }),
 
-    // 2. Delete Product
-    await prismaClient.product.delete({ where: { id } });
+        // 3. Delete from Wishlists
+        prismaClient.wishlist.deleteMany({
+            where: { productId: id }
+        }),
+
+        // 4. Finally, Delete Product
+        prismaClient.product.delete({
+            where: { id }
+        })
+    ]);
 
     revalidatePath("/cart");
     revalidatePath("/");
@@ -111,7 +124,7 @@ export async function deleteProductFromDb(id: string) {
     return { success: true };
   } catch (err: any) {
     console.error("Delete Error:", err);
-    return { success: false, message: "Failed to delete item" };
+    return { success: false, message: "Failed to delete item: " + err.message };
   }
 }
 

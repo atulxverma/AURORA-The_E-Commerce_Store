@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AiOutlinePlus, AiOutlineCloudUpload } from "react-icons/ai";
 import { FiX, FiTrash2 } from "react-icons/fi";
 import { addNewProduct } from "@/actions/prodactions";
+import { toast } from "sonner";
 
 export default function AddProdButton({ onProductAdded }: { onProductAdded?: (item: any) => void }) {
   const [open, setOpen] = useState(false);
@@ -73,27 +74,22 @@ export default function AddProdButton({ onProductAdded }: { onProductAdded?: (it
     formData.append("category", category || "General");
     formData.append("image", finalImages[0]); 
 
-    startTransition(async () => {
+   startTransition(async () => {
       const res = await addNewProduct(formData);
-      
       if (res.success && res.newProduct) {
-        alert("Product Added Successfully!");
         setOpen(false);
+        if (onProductAdded) onProductAdded(res.newProduct);
         
-        if (onProductAdded) {
-            onProductAdded(res.newProduct);
-        }
-
-        setTitle(""); setDescription(""); setPrice(""); setCategory(""); setTags("");
-        setAddedImages([]);
+        toast.success("Product Live!", { description: "Your item has been listed successfully." }); // <---
+        
+        setTitle(""); setDescription(""); setPrice(""); setCategory(""); setTags(""); setAddedImages([]);
         if(urlInputRef.current) urlInputRef.current.value = "";
-        
         router.refresh();
       } else {
-        alert(res.message || "Failed to add product");
+        toast.error("Failed", { description: res.message }); // <---
       }
     });
-  };
+  }
 
   // --- PORTAL CONTENT ---
   const modalContent = (
@@ -151,4 +147,4 @@ export default function AddProdButton({ onProductAdded }: { onProductAdded?: (it
       {open && mounted && createPortal(modalContent, document.body)}
     </>
   );
-}
+  }
