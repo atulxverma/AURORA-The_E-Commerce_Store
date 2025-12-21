@@ -4,8 +4,32 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-// --- FIX: IMPORT NODEMAILER UTILITY ---
-import { sendEmail } from "@/lib/mail"; 
+import nodemailer from "nodemailer"; // <--- Import Nodemailer Here
+
+// ==========================================
+// EMAIL HELPER (INTERNAL)
+// ==========================================
+const sendEmailInternal = async (to: string, subject: string, html: string) => {
+  try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"Aurora Store" <${process.env.GMAIL_USER}>`,
+      to,
+      subject,
+      html,
+    });
+    console.log("✅ Email sent successfully");
+  } catch (error) {
+    console.error("❌ Email failed:", error);
+  }
+};
 
 // ==========================================
 // 1. ADD NEW PRODUCT
@@ -40,7 +64,6 @@ export async function addNewProduct(formData: FormData) {
     return { success: true, newProduct: product }; 
 
   } catch (error: any) {
-    console.error("Create Product Error:", error);
     return { success: false, message: "Failed to create product" };
   }
 }
@@ -129,7 +152,7 @@ export async function addProductToDb(data: any) {
 }
 
 // ==========================================
-// CART & ORDER ACTIONS
+// CART & ORDER
 // ==========================================
 
 export async function addProductToCart(productData: any) {
@@ -171,7 +194,7 @@ export async function clearCartInDb() {
 }
 
 // ==========================================
-// PLACE ORDER (With Nodemailer)
+// PLACE ORDER (With INTERNAL EMAIL)
 // ==========================================
 
 export async function placeOrder(formData: any, paymentId?: string) {
@@ -207,9 +230,9 @@ export async function placeOrder(formData: any, paymentId?: string) {
       },
     });
 
-    // --- SEND EMAIL VIA GMAIL (NODEMAILER) ---
+    // --- SEND EMAIL (USING INTERNAL FUNCTION) ---
     if (user.email) {
-      await sendEmail(
+      await sendEmailInternal(
         user.email,
         "Order Confirmed - AURORA",
         `
@@ -298,7 +321,7 @@ export async function getWishlist() {
 
 export async function addReview(formData: FormData) {
   const user = await getCurrentUser();
-  if (!user) return { success: false, message: "Please login to review" };
+  if (!user) return { success: false, message: "Please login" };
 
   const productId = formData.get("productId") as string;
   const comment = formData.get("comment") as string;
