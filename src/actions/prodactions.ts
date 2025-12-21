@@ -4,12 +4,12 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import nodemailer from "nodemailer";
+import nodemailer from "nodemailer"; // Ensure nodemailer is installed
 
-// ==========================================================
-// 📧 EMAIL HELPER (INTERNAL)
-// ==========================================================
-const sendEmail = async (to: string, subject: string, html: string) => {
+// ==========================================
+// 📧 EMAIL HELPER (Defined Locally)
+// ==========================================
+async function sendEmail(to: string, subject: string, html: string) {
   try {
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -29,13 +29,12 @@ const sendEmail = async (to: string, subject: string, html: string) => {
   } catch (error) {
     console.error("❌ Email failed:", error);
   }
-};
+}
 
-// ==========================================================
+// ==========================================
 // 🛍️ PRODUCT ACTIONS (CRUD)
-// ==========================================================
+// ==========================================
 
-// 1. ADD NEW PRODUCT (Form Data Version)
 export async function addNewProduct(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) return { success: false, message: "Unauthorized: Please login first" };
@@ -63,8 +62,6 @@ export async function addNewProduct(formData: FormData) {
 
     revalidatePath("/profile");
     revalidatePath("/"); 
-    
-    // Return the new product so UI can update instantly
     return { success: true, newProduct: product }; 
 
   } catch (error: any) {
@@ -73,16 +70,12 @@ export async function addNewProduct(formData: FormData) {
   }
 }
 
-// 2. UPDATE PRODUCT
 export async function updateProductInDb(data: any) {
   try {
     const user = await getCurrentUser();
     if (!user) return { success: false, message: "Unauthorized" };
 
-    const existingProduct = await prismaClient.product.findUnique({
-      where: { id: data.id },
-    });
-
+    const existingProduct = await prismaClient.product.findUnique({ where: { id: data.id } });
     if (!existingProduct) return { success: false, message: "Product not found" };
     
     if (existingProduct.ownerId !== user.id) {
@@ -109,7 +102,6 @@ export async function updateProductInDb(data: any) {
   }
 }
 
-// 3. DELETE PRODUCT (With Full Cleanup)
 export async function deleteProductFromDb(id: string) {
   const user = await getCurrentUser();
   if (!user) return { success: false, message: "Unauthorized" };
@@ -122,24 +114,11 @@ export async function deleteProductFromDb(id: string) {
   }
 
   try {
-    // Transaction to delete everything related to this product
     await prismaClient.$transaction([
-        // Delete Reviews
-        prismaClient.review.deleteMany({
-            where: { productId: id }
-        }),
-        // Delete from Carts
-        prismaClient.cart.deleteMany({
-            where: { productId: id }
-        }),
-        // Delete from Wishlists
-        prismaClient.wishlist.deleteMany({
-            where: { productId: id }
-        }),
-        // Finally Delete Product
-        prismaClient.product.delete({
-            where: { id }
-        })
+        prismaClient.review.deleteMany({ where: { productId: id } }),
+        prismaClient.cart.deleteMany({ where: { productId: id } }),
+        prismaClient.wishlist.deleteMany({ where: { productId: id } }),
+        prismaClient.product.delete({ where: { id } })
     ]);
 
     revalidatePath("/cart");
@@ -152,7 +131,6 @@ export async function deleteProductFromDb(id: string) {
   }
 }
 
-// 4. ADD PRODUCT (Legacy JSON Version)
 export async function addProductToDb(data: any) {
     const user = await getCurrentUser();
     if (!user) return { success: false, message: "Login required" };
@@ -183,7 +161,7 @@ export async function addProductToDb(data: any) {
 
 export async function addProductToCart(productData: any) {
   const user = await getCurrentUser();
-  if (!user) return { success: false, message: "Please login to add items to cart" };
+  if (!user) return { success: false, message: "Please login to add to cart" };
 
   try {
     const prodId = String(productData.id);
@@ -241,7 +219,7 @@ export async function clearCartInDb() {
 }
 
 // ==========================================================
-// 💳 ORDER ACTIONS (With Email Integration)
+// 💳 PLACE ORDER (Now Uses Local sendEmail)
 // ==========================================================
 
 export async function placeOrder(formData: any, paymentId?: string) {
@@ -249,14 +227,11 @@ export async function placeOrder(formData: any, paymentId?: string) {
   if (!user) return { success: false, message: "Login required" };
 
   try {
-    // 1. Fetch Cart Items
     const cartItems = await prismaClient.cart.findMany({ where: { userId: user.id } });
-    if (cartItems.length === 0) return { success: false, message: "Cart is empty" };
+    if (cartItems.length === 0) return { success: false, message: "Cart empty" };
 
-    // 2. Calculate Total
     const total = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
-    // 3. Create Order in Database
     const order = await prismaClient.order.create({
       data: {
         userId: user.id,
@@ -280,10 +255,8 @@ export async function placeOrder(formData: any, paymentId?: string) {
       },
     });
 
-    // 4. Send Confirmation Email
+    // Send Email using local function
     if (user.email) {
-      console.log("Attempting to send email to:", user.email);
-      
       await sendEmail(
         user.email,
         "Order Confirmed - AURORA",
@@ -308,9 +281,7 @@ export async function placeOrder(formData: any, paymentId?: string) {
       );
     }
 
-    // 5. Clear Cart
     await prismaClient.cart.deleteMany({ where: { userId: user.id } });
-    
     revalidatePath("/orders"); 
     revalidatePath("/cart");
     
@@ -426,10 +397,8 @@ export async function addReview(formData: FormData) {
   if (!comment || !rating) return { success: false, message: "All fields required" };
 
   try {
-    // 1. Check Product in DB
     let product = await prismaClient.product.findUnique({ where: { id: productId } });
 
-    // 2. If API Product, Create in DB
     if (!product) {
         const res = await fetch(`https://dummyjson.com/products/${productId}`);
         if (!res.ok) return { success: false, message: "Product not found" };
@@ -448,29 +417,19 @@ export async function addReview(formData: FormData) {
         });
     }
 
-    // 3. Prevent Self Review
     if (product.ownerId && product.ownerId === user.id) {
         return { success: false, message: "Cannot review own product." };
     }
 
-    // 4. Check Duplicate
     const existing = await prismaClient.review.findFirst({
         where: { userId: user.id, productId: productId }
     });
 
     if(existing) return { success: false, message: "Already reviewed" };
 
-    // 5. Create Review
     const newReview = await prismaClient.review.create({
-      data: {
-        userId: user.id,
-        productId: productId,
-        rating: rating,
-        comment: comment
-      },
-      include: {
-        user: { select: { name: true } }
-      }
+      data: { userId: user.id, productId: productId, rating: rating, comment: comment },
+      include: { user: { select: { name: true } } }
     });
 
     revalidatePath(`/product/${productId}`);
