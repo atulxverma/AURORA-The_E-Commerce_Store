@@ -4,12 +4,12 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-// Import Nodemailer wrapper
+// --- FIX: IMPORT NODEMAILER UTILITY ---
 import { sendEmail } from "@/lib/mail"; 
 
-// ==========================================================
-// 1. ADD NEW PRODUCT (Form Data)
-// ==========================================================
+// ==========================================
+// 1. ADD NEW PRODUCT
+// ==========================================
 export async function addNewProduct(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) return { success: false, message: "Unauthorized" };
@@ -40,13 +40,14 @@ export async function addNewProduct(formData: FormData) {
     return { success: true, newProduct: product }; 
 
   } catch (error: any) {
+    console.error("Create Product Error:", error);
     return { success: false, message: "Failed to create product" };
   }
 }
 
-// ==========================================================
+// ==========================================
 // 2. UPDATE PRODUCT
-// ==========================================================
+// ==========================================
 export async function updateProductInDb(data: any) {
   try {
     const user = await getCurrentUser();
@@ -76,9 +77,9 @@ export async function updateProductInDb(data: any) {
   }
 }
 
-// ==========================================================
+// ==========================================
 // 3. DELETE PRODUCT
-// ==========================================================
+// ==========================================
 export async function deleteProductFromDb(id: string) {
   const user = await getCurrentUser();
   if (!user) return { success: false, message: "Unauthorized" };
@@ -103,9 +104,7 @@ export async function deleteProductFromDb(id: string) {
   }
 }
 
-// ==========================================================
-// 4. ADD PRODUCT (JSON - Legacy)
-// ==========================================================
+// 4. LEGACY ADD (JSON)
 export async function addProductToDb(data: any) {
     const user = await getCurrentUser();
     if (!user) return { success: false, message: "Login required" };
@@ -129,9 +128,9 @@ export async function addProductToDb(data: any) {
     }
 }
 
-// ==========================================================
+// ==========================================
 // CART & ORDER ACTIONS
-// ==========================================================
+// ==========================================
 
 export async function addProductToCart(productData: any) {
   const user = await getCurrentUser();
@@ -171,9 +170,9 @@ export async function clearCartInDb() {
   return { success: true };
 }
 
-// ==========================================================
-// PLACE ORDER (Fixed Email Name Issue)
-// ==========================================================
+// ==========================================
+// PLACE ORDER (With Nodemailer)
+// ==========================================
 
 export async function placeOrder(formData: any, paymentId?: string) {
   const user = await getCurrentUser();
@@ -208,43 +207,22 @@ export async function placeOrder(formData: any, paymentId?: string) {
       },
     });
 
-    // --- SEND EMAIL (NODEMAILER) ---
+    // --- SEND EMAIL VIA GMAIL (NODEMAILER) ---
     if (user.email) {
-      // FIX: Ensure name is never undefined
-      const customerName = user.name || user.username || "Customer";
-
       await sendEmail(
         user.email,
         "Order Confirmed - AURORA",
         `
-        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-          <h1 style="color: #000; letter-spacing: -1px; margin-bottom: 20px;">AURORA.</h1>
-          
-          <p style="color: #333; font-size: 16px;">Hi <strong>${customerName}</strong>,</p>
-          
-          <p style="color: #555; line-height: 1.5;">
-            Thank you for shopping with us! Your order has been placed successfully and is being processed.
-          </p>
-          
-          <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;" />
-          
-          <div style="background-color: #f9fafb; padding: 20px; border-radius: 12px; border: 1px solid #f0f0f0;">
-            <p style="margin: 5px 0; font-size: 14px; color: #666;">Order ID</p>
-            <p style="margin: 0 0 15px 0; font-size: 18px; font-weight: bold; color: #000;">#${order.id.slice(-6).toUpperCase()}</p>
-            
-            <p style="margin: 5px 0; font-size: 14px; color: #666;">Total Amount</p>
-            <p style="margin: 0 0 15px 0; font-size: 18px; font-weight: bold; color: #000;">₹${total.toLocaleString()}</p>
-            
-            <p style="margin: 5px 0; font-size: 14px; color: #666;">Payment Status</p>
-            <span style="background-color: ${paymentId ? '#dcfce7' : '#fef9c3'}; color: ${paymentId ? '#166534' : '#854d0e'}; padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: bold; text-transform: uppercase;">
-                ${paymentId ? "PAID ONLINE" : "PROCESSING"}
-            </span>
-          </div>
-
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h1 style="color: #000;">AURORA.</h1>
+          <p>Hi ${user.name || "Customer"},</p>
+          <p>Your order has been placed successfully.</p>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p><strong>Order ID:</strong> #${order.id.slice(-6).toUpperCase()}</p>
+          <p><strong>Amount:</strong> ₹${total}</p>
+          <p><strong>Status:</strong> ${paymentId ? "Paid Online" : "Processing"}</p>
           <br/>
-          <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
-            © 2026 Aurora Store. Defining Luxury.
-          </p>
+          <p style="color: #888; font-size: 12px;">Thank you for shopping with us.</p>
         </div>
         `
       );
@@ -320,7 +298,7 @@ export async function getWishlist() {
 
 export async function addReview(formData: FormData) {
   const user = await getCurrentUser();
-  if (!user) return { success: false, message: "Please login" };
+  if (!user) return { success: false, message: "Please login to review" };
 
   const productId = formData.get("productId") as string;
   const comment = formData.get("comment") as string;

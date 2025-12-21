@@ -49,51 +49,51 @@ const res = await placeOrder(formData, "TEST_PAYMENT_ID_123");
       toast.error(res.message);
   }
   //RAZORPAY
-    // try {
-    //     // 1. Create Order (Server calculates amount)
-    //     const response = await fetch("/api/razorpay", { method: "POST" });
-    //     const order = await response.json();
+    try {
+        // 1. Create Order (Server calculates amount)
+        const response = await fetch("/api/razorpay", { method: "POST" });
+        const order = await response.json();
 
-    //     if (order.error) throw new Error(order.error);
+        if (order.error) throw new Error(order.error);
 
-    //     // 2. Open Razorpay
-    //     const options = {
-    //         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, 
-    //         amount: order.amount,
-    //         currency: "INR",
-    //         name: "Aurora Store",
-    //         description: "Premium Checkout",
-    //         order_id: order.id,
-    //         handler: async function (response: any) {
-    //             toast.loading("Verifying Payment...");
+        // 2. Open Razorpay
+        const options = {
+            key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, 
+            amount: order.amount,
+            currency: "INR",
+            name: "Aurora Store",
+            description: "Premium Checkout",
+            order_id: order.id,
+            handler: async function (response: any) {
+                toast.loading("Verifying Payment...");
                 
-    //             // 3. Save to DB
-    //             const res = await placeOrder(formData, response.razorpay_payment_id);
+                // 3. Save to DB
+                const res = await placeOrder(formData, response.razorpay_payment_id);
                 
-    //             if (res.success) {
-    //                 toast.success("Order Placed Successfully!");
-    //                 router.push("/orders");
-    //             } else {
-    //                 toast.error("Database Error: " + res.message);
-    //             }
-    //         },
-    //         prefill: {
-    //             name: currentUser?.name,
-    //             email: currentUser?.email,
-    //         },
-    //         theme: {
-    //             color: "#000000",
-    //         },
-    //     };
+                if (res.success) {
+                    toast.success("Order Placed Successfully!");
+                    router.push("/orders");
+                } else {
+                    toast.error("Database Error: " + res.message);
+                }
+            },
+            prefill: {
+                name: currentUser?.name,
+                email: currentUser?.email,
+            },
+            theme: {
+                color: "#000000",
+            },
+        };
 
-    //     const rzp1 = new window.Razorpay(options);
-    //     rzp1.open();
-    //     setLoading(false);
+        const rzp1 = new window.Razorpay(options);
+        rzp1.open();
+        setLoading(false);
 
-    // } catch (error: any) {
-    //     toast.error("Payment Failed", { description: error.message });
-    //     setLoading(false);
-    // }
+    } catch (error: any) {
+        toast.error("Payment Failed", { description: error.message });
+        setLoading(false);
+    }
 
   };
 
