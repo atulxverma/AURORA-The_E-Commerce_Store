@@ -80,7 +80,8 @@ model Order {
   zipCode     String
   country     String
   totalAmount Float
-  status      String      @default("Pending")
+  status      String      @default("Processing")
+  paymentId   String?  
   items       OrderItem[]
   createdAt   DateTime    @default(now())
 }

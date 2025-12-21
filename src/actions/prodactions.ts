@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { Resend } from 'resend';
+import OrderEmail from '@/emails/OrderEmail';
 
 // ==========================================
 // PRODUCT ACTIONS (CRUD)
@@ -38,7 +40,7 @@ export async function addNewProduct(formData: FormData) {
     revalidatePath("/profile");
     revalidatePath("/"); 
     
-    // *** IMPORTANT: Return the new product so UI can update instantly ***
+    // Return new product for Instant UI Update
     return { success: true, newProduct: product }; 
 
   } catch (error: any) {
@@ -95,24 +97,17 @@ export async function deleteProductFromDb(id: string) {
   }
 
   try {
-    // --- FIX: TRANSACTION (Delete Reviews -> Cart -> Product) ---
+    // Transaction (Delete Reviews -> Cart -> Product)
     await prismaClient.$transaction([
-        // 1. Delete associated Reviews first (To fix P2014 error)
         prismaClient.review.deleteMany({
             where: { productId: id }
         }),
-        
-        // 2. Delete from Carts
         prismaClient.cart.deleteMany({
             where: { productId: id }
         }),
-
-        // 3. Delete from Wishlists
         prismaClient.wishlist.deleteMany({
             where: { productId: id }
         }),
-
-        // 4. Finally, Delete Product
         prismaClient.product.delete({
             where: { id }
         })
@@ -128,7 +123,7 @@ export async function deleteProductFromDb(id: string) {
   }
 }
 
-// 4. ADD PRODUCT (Legacy JSON - Keeping for safety)
+// 4. ADD PRODUCT (Legacy JSON)
 export async function addProductToDb(data: any) {
     const user = await getCurrentUser();
     if (!user) return { success: false, message: "Login required" };
@@ -214,23 +209,19 @@ export async function clearCartInDb() {
   return { success: true };
 }
 
-export async function placeOrder(formData: any) {
+// ==========================================
+// PLACE ORDER (FINAL WITH NODEMAILER)
+// ==========================================
+
+export async function placeOrder(formData: any, paymentId?: string) {
   const user = await getCurrentUser();
   if (!user) return { success: false, message: "Login required" };
 
   try {
-    const cartItems = await prismaClient.cart.findMany({
-      where: { userId: user.id },
-    });
+    const cartItems = await prismaClient.cart.findMany({ where: { userId: user.id } });
+    if (cartItems.length === 0) return { success: false, message: "Cart empty" };
 
-    if (cartItems.length === 0) {
-      return { success: false, message: "Cart empty" };
-    }
-
-    const total = cartItems.reduce(
-      (acc, item) => acc + (item.price * item.quantity),
-      0
-    );
+    const total = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
     const order = await prismaClient.order.create({
       data: {
@@ -241,9 +232,10 @@ export async function placeOrder(formData: any) {
         zipCode: formData.zipCode,
         country: formData.country,
         totalAmount: total,
-        status: "Processing",
+        status: paymentId ? "Paid" : "Processing",
+        paymentId: paymentId || null,
         items: {
-          create: cartItems.map((item) => ({
+          create: cartItems.map(item => ({
             productId: item.productId,
             title: item.title,
             price: item.price,
@@ -254,14 +246,34 @@ export async function placeOrder(formData: any) {
       },
     });
 
-    await prismaClient.cart.deleteMany({ where: { userId: user.id } });
-    revalidatePath("/orders");
-    revalidatePath("/cart");
+    // --- SEND EMAIL VIA GMAIL ---
+    if (user.email) {
+      await sendEmail(
+        user.email,
+        "Order Confirmed - AURORA",
+        `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h1 style="color: #000;">AURORA.</h1>
+          <p>Hi ${user.name},</p>
+          <p>Your order has been placed successfully.</p>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p><strong>Order ID:</strong> #${order.id.slice(-6).toUpperCase()}</p>
+          <p><strong>Amount:</strong> ₹${total}</p>
+          <p><strong>Status:</strong> ${paymentId ? "Paid Online" : "Processing"}</p>
+          <br/>
+          <p style="color: #888; font-size: 12px;">Thank you for shopping with us.</p>
+        </div>
+        `
+      );
+    }
 
+    await prismaClient.cart.deleteMany({ where: { userId: user.id } });
+    revalidatePath("/orders"); 
+    revalidatePath("/cart");
+    
     return { success: true, orderId: order.id };
   } catch (err: any) {
-    console.error("Order Error:", err);
-    return { success: false, message: "Failed to place order: " + err.message };
+    return { success: false, message: err.message };
   }
 }
 
@@ -351,9 +363,8 @@ export async function getWishlist() {
 }
 
 // ==========================================
-// REVIEW ACTIONS (UPDATED FOR INSTANT UI)
+// REVIEW ACTIONS
 // ==========================================
-
 
 export async function addReview(formData: FormData) {
   const user = await getCurrentUser();
@@ -366,46 +377,38 @@ export async function addReview(formData: FormData) {
   if (!comment || !rating) return { success: false, message: "All fields required" };
 
   try {
-    // 1. Pehle check karo product DB me hai ya nahi
     let product = await prismaClient.product.findUnique({ where: { id: productId } });
 
-    // --- IF PRODUCT NOT IN DB (API PRODUCT) ---
     if (!product) {
-        // Fetch details from API
         const res = await fetch(`https://dummyjson.com/products/${productId}`);
         if (!res.ok) return { success: false, message: "Product not found" };
         
         const apiData = await res.json();
 
-        // Save API product to our DB (Taaki hum uspe review laga sakein)
         product = await prismaClient.product.create({
             data: {
-                id: productId, // IMPORTANT: Use same ID from API
+                id: productId,
                 title: apiData.title,
                 description: apiData.description,
                 price: apiData.price,
                 category: apiData.category,
                 thumbnail: apiData.thumbnail,
                 images: apiData.images || [],
-                // OwnerId null rakhenge kyunki ye system product hai
                 ownerId: null 
             }
         });
     }
 
-    // 2. Self Review Check (Sirf agar owner exist karta ho)
     if (product.ownerId && product.ownerId === user.id) {
-        return { success: false, message: "You cannot review your own product." };
+        return { success: false, message: "Cannot review own product." };
     }
 
-    // 3. Check Duplicate Review
     const existing = await prismaClient.review.findFirst({
         where: { userId: user.id, productId: productId }
     });
 
-    if(existing) return { success: false, message: "You already reviewed this item" };
+    if(existing) return { success: false, message: "Already reviewed" };
 
-    // 4. Create Review
     const newReview = await prismaClient.review.create({
       data: {
         userId: user.id,
@@ -422,10 +425,8 @@ export async function addReview(formData: FormData) {
     return { success: true, newReview };
 
   } catch (err: any) {
-    console.error("Review Error:", err);
-    // Agar ID format MongoDB jaisa nahi hai (API IDs alag hoti hain kabhi kabhi)
-    if(err.code === 'P2002' || err.message.includes("Malformed ObjectID")) {
-         return { success: false, message: "System products cannot be reviewed yet." };
+    if(err.code === 'P2002' || err.message.includes("Malformed")) {
+         return { success: false, message: "Reviews disabled for this item." };
     }
     return { success: false, message: err.message };
   }
