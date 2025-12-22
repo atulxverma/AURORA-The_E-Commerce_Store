@@ -4,32 +4,8 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import nodemailer from "nodemailer"; // Ensure nodemailer is installed
+import { sendEmail } from "@/lib/mail";
 
-// ==========================================
-// 📧 EMAIL HELPER (Defined Locally)
-// ==========================================
-async function sendEmail(to: string, subject: string, html: string) {
-  try {
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_PASS,
-      },
-    });
-
-    await transporter.sendMail({
-      from: `"Aurora Store" <${process.env.GMAIL_USER}>`,
-      to,
-      subject,
-      html,
-    });
-    console.log("✅ Email sent successfully to:", to);
-  } catch (error) {
-    console.error("❌ Email failed:", error);
-  }
-}
 
 // ==========================================
 // 🛍️ PRODUCT ACTIONS (CRUD)
@@ -263,7 +239,7 @@ export async function placeOrder(formData: any, paymentId?: string) {
         `
         <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: 0 auto;">
           <h1 style="color: #000; letter-spacing: -1px;">AURORA.</h1>
-          <p style="color: #333; font-size: 16px;">Hi ${user.name || "Customer"},</p>
+          <p style="color: #333; font-size: 16px;">Hi ${user.username || "Customer"},</p>
           <p style="color: #555;">Thank you for shopping with us! Your order has been placed successfully.</p>
           
           <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
