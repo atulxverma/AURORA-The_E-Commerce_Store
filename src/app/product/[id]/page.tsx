@@ -8,7 +8,7 @@ import FadeIn from '@/app/components/FadeIn';
 import ReviewsSection from '@/app/components/ReviewsSection'; 
 import WishlistButton from '@/app/components/wishlist-button'; 
 import { FiCheckCircle, FiPackage, FiTag, FiStar } from "react-icons/fi";
-import { getWishlist } from "@/actions/prodactions"; // Import Action
+import { getWishlist } from "@/actions/prodactions"; 
 
 export default function ProductPage() {
   const params = useParams();  
@@ -19,33 +19,45 @@ export default function ProductPage() {
   const [loading, setLoading] = useState(true);
   
   // --- STATE FOR WISHLIST STATUS ---
-  // Isse hum track karenge ki item wishlist me hai ya nahi
   const [isLiked, setIsLiked] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
       try {
+        setLoading(true);
         // 1. Fetch Product
         const res = await fetch(`/api/product/${id}`);
         const data = await res.json();
-        if (data.success) setProduct(data.product);
-
+        
         // 2. Fetch User
         const userRes = await fetch("/api/me");
+        let userData = null;
+        
         if (userRes.ok) {
-            const userData = await userRes.json();
-            setCurrentUser(userData.user);
+            const uData = await userRes.json();
+            userData = uData.user;
+            setCurrentUser(userData);
+        }
 
-            // 3. CHECK WISHLIST STATUS (Fix for Reload Issue)
-            if (userData.user) {
-                const wishlistItems = await getWishlist();
-                // Robust Check: String comparison to be safe
-                const found = wishlistItems.find((w: any) => String(w.productId) === String(id));
-                setIsLiked(!!found); // Set true if found
+        if (data.success) {
+            setProduct(data.product);
+
+            // 3. CHECK WISHLIST STATUS (CRITICAL FIX FOR RELOAD)
+            if (userData) {
+                try {
+                    const wishlistItems = await getWishlist(); // Server Action
+                    if (Array.isArray(wishlistItems)) {
+                        // Ensure IDs are compared as strings to avoid type mismatch
+                        const found = wishlistItems.find((w: any) => String(w.productId) === String(id));
+                        setIsLiked(!!found);
+                    }
+                } catch (error) {
+                    console.error("Wishlist check failed:", error);
+                }
             }
         }
       } catch (err) {
-        console.error(err);
+        console.error("Fetch error:", err);
       } finally {
         setLoading(false);
       }
@@ -53,7 +65,7 @@ export default function ProductPage() {
     if(id) fetchData();
   }, [id]);
 
-  // Listener to sync state if toggled elsewhere (optional but good)
+  // Listener to sync state if toggled elsewhere
   useEffect(() => {
     const handleSync = (e: any) => {
         if(e.detail.id === id) setIsLiked(e.detail.status);
@@ -62,7 +74,6 @@ export default function ProductPage() {
     return () => window.removeEventListener("wishlist-updated", handleSync);
   }, [id]);
 
-  // Star Renderer
   const renderStars = (rating: number) => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -76,8 +87,17 @@ export default function ProductPage() {
     return <div className="flex items-center gap-1">{stars} <span className="text-xs text-gray-500 ml-2">({rating || 0})</span></div>;
   };
 
-  if (loading) return <div className="min-h-screen bg-gray-50 pt-40 text-center"><div className="animate-pulse text-xl font-bold text-gray-400">Loading...</div></div>;
-  if (!product) return <div className="min-h-screen bg-gray-50 pt-40 text-center"><div className="text-xl font-bold text-red-500">Product not found</div></div>;
+  if (loading) return (
+      <div className="min-h-screen bg-gray-50 pt-40 text-center">
+          <div className="animate-pulse text-xl font-bold text-gray-400">Loading...</div>
+      </div>
+  );
+  
+  if (!product) return (
+      <div className="min-h-screen bg-gray-50 pt-40 text-center">
+          <div className="text-xl font-bold text-red-500">Product not found</div>
+      </div>
+  );
 
   const isDbProduct = product.id.length === 24;
   const isOwner = isDbProduct && currentUser?.id === product.ownerId;
@@ -101,9 +121,8 @@ export default function ProductPage() {
              {/* --- WISHLIST BUTTON (FIXED) --- */}
              {!isOwner && (
                  <div className="absolute top-6 right-6 z-20 bg-white rounded-full shadow-lg hover:scale-110 transition p-1 cursor-pointer">
-                     {/* Key prop forces re-render when state changes */}
                      <WishlistButton 
-                        key={isLiked ? "liked" : "unliked"} 
+                        key={isLiked ? "liked" : "unliked"} // Force re-render on state change
                         product={product} 
                         initialLiked={isLiked} 
                      />
