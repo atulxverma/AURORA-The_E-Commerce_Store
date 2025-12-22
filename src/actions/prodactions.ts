@@ -7,9 +7,9 @@ import { redirect } from "next/navigation";
 import nodemailer from "nodemailer";
 
 // ==========================================================
-// 📧 EMAIL HELPER (TOP LEVEL - Accessible everywhere)
+// 📧 EMAIL HELPER (Defined Locally & Named Correctly)
 // ==========================================================
-const sendEmailInternal = async (to: string, subject: string, html: string) => {
+const sendEmail = async (to: string, subject: string, html: string) => {
   try {
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -25,19 +25,19 @@ const sendEmailInternal = async (to: string, subject: string, html: string) => {
       subject,
       html,
     });
-    console.log("✅ Email sent successfully");
+    console.log("✅ Email sent successfully to:", to);
   } catch (error) {
     console.error("❌ Email failed:", error);
   }
 };
 
 // ==========================================================
-// 🛍️ PRODUCT ACTIONS
+// 🛍️ PRODUCT ACTIONS (CRUD)
 // ==========================================================
 
 export async function addNewProduct(formData: FormData) {
   const user = await getCurrentUser();
-  if (!user) return { success: false, message: "Unauthorized" };
+  if (!user) return { success: false, message: "Unauthorized: Please login first" };
 
   const title = formData.get("title") as string;
   const price = parseFloat(formData.get("price") as string);
@@ -65,6 +65,7 @@ export async function addNewProduct(formData: FormData) {
     return { success: true, newProduct: product }; 
 
   } catch (error: any) {
+    console.error("Create Product Error:", error);
     return { success: false, message: "Failed to create product" };
   }
 }
@@ -75,8 +76,11 @@ export async function updateProductInDb(data: any) {
     if (!user) return { success: false, message: "Unauthorized" };
 
     const existingProduct = await prismaClient.product.findUnique({ where: { id: data.id } });
-    if (!existingProduct) return { success: false, message: "Not found" };
-    if (existingProduct.ownerId !== user.id) return { success: false, message: "Not allowed" };
+    if (!existingProduct) return { success: false, message: "Product not found" };
+    
+    if (existingProduct.ownerId !== user.id) {
+        return { success: false, message: "You are not the owner of this product" };
+    }
 
     await prismaClient.product.update({
       where: { id: data.id },
@@ -103,8 +107,11 @@ export async function deleteProductFromDb(id: string) {
   if (!user) return { success: false, message: "Unauthorized" };
 
   const product = await prismaClient.product.findUnique({ where: { id } });
-  if (!product) return { success: false, message: "Not found" };
-  if (product.ownerId !== user.id) return { success: false, message: "You are not the owner!" };
+  if (!product) return { success: false, message: "Product not found" };
+
+  if (product.ownerId !== user.id) {
+    return { success: false, message: "You are not the owner!" };
+  }
 
   try {
     await prismaClient.$transaction([
@@ -116,9 +123,11 @@ export async function deleteProductFromDb(id: string) {
 
     revalidatePath("/cart");
     revalidatePath("/");
+
     return { success: true };
   } catch (err: any) {
-    return { success: false, message: "Failed to delete item" };
+    console.error("Delete Error:", err);
+    return { success: false, message: "Failed to delete item: " + err.message };
   }
 }
 
@@ -151,24 +160,43 @@ export async function addProductToDb(data: any) {
 
 export async function addProductToCart(productData: any) {
   const user = await getCurrentUser();
-  if (!user) return { success: false, message: "Please login" };
+  if (!user) return { success: false, message: "Please login to add to cart" };
+
   try {
     const prodId = String(productData.id);
-    const existingItem = await prismaClient.cart.findFirst({ where: { userId: user.id, productId: prodId } });
+    const existingItem = await prismaClient.cart.findFirst({
+      where: { userId: user.id, productId: prodId },
+    });
+
     if (existingItem) {
-      await prismaClient.cart.update({ where: { id: existingItem.id }, data: { quantity: existingItem.quantity + 1 } });
+      await prismaClient.cart.update({
+        where: { id: existingItem.id },
+        data: { quantity: existingItem.quantity + 1 },
+      });
     } else {
       await prismaClient.cart.create({
-        data: { userId: user.id, productId: prodId, title: productData.title, description: productData.description || "", price: parseFloat(productData.price), image_url: productData.thumbnail || "", quantity: 1 },
+        data: {
+          userId: user.id,
+          productId: prodId,
+          title: productData.title,
+          description: productData.description || "",
+          price: parseFloat(productData.price),
+          image_url: productData.thumbnail || "",
+          quantity: 1,
+        },
       });
     }
     revalidatePath("/cart");
     return { success: true };
-  } catch (err: any) { return { success: false, message: err.message }; }
+  } catch (err: any) {
+    return { success: false, message: err.message };
+  }
 }
 
 export async function updateQuantity(id: string, quantity: number) {
-  if (quantity < 1) return deleteProductFromCart(id);
+  if (quantity < 1) {
+      return deleteProductFromCart(id);
+  }
   await prismaClient.cart.update({ where: { id }, data: { quantity } });
   revalidatePath("/cart");
   return { success: true };
@@ -182,13 +210,15 @@ export async function deleteProductFromCart(id: string) {
 
 export async function clearCartInDb() {
   const user = await getCurrentUser();
-  if (user) await prismaClient.cart.deleteMany({ where: { userId: user.id } });
+  if (user) {
+    await prismaClient.cart.deleteMany({ where: { userId: user.id } });
+  }
   revalidatePath("/cart");
   return { success: true };
 }
 
 // ==========================================================
-// 💳 PLACE ORDER (FIXED)
+// 💳 PLACE ORDER (FIXED: Calls local sendEmail)
 // ==========================================================
 
 export async function placeOrder(formData: any, paymentId?: string) {
@@ -203,36 +233,65 @@ export async function placeOrder(formData: any, paymentId?: string) {
 
     const order = await prismaClient.order.create({
       data: {
-        userId: user.id, fullName: formData.fullName, address: formData.address, city: formData.city, zipCode: formData.zipCode, country: formData.country, totalAmount: total,
-        status: paymentId ? "Paid" : "Processing", paymentId: paymentId || null,
-        items: { create: cartItems.map(item => ({ productId: item.productId, title: item.title, price: item.price, quantity: item.quantity, image_url: item.image_url })) }
-      }
+        userId: user.id,
+        fullName: formData.fullName,
+        address: formData.address,
+        city: formData.city,
+        zipCode: formData.zipCode,
+        country: formData.country,
+        totalAmount: total,
+        status: paymentId ? "Paid" : "Processing",
+        paymentId: paymentId || null,
+        items: {
+          create: cartItems.map(item => ({
+            productId: item.productId,
+            title: item.title,
+            price: item.price,
+            quantity: item.quantity,
+            image_url: item.image_url,
+          })),
+        },
+      },
     });
 
+    // Send Email using local function (Now correctly named sendEmail)
     if (user.email) {
-      // --- FIX: CAST USER TO ANY TO ACCESS NAME ---
+      // Cast user to any to avoid strict type error on 'name'
       const userName = (user as any).name || user.username || "Customer";
 
-      await sendEmailInternal(
+      await sendEmail(
         user.email,
         "Order Confirmed - AURORA",
-        `<div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-          <h1 style="color: #000;">AURORA.</h1><p>Hi ${userName},</p><p>Your order has been placed successfully.</p>
+        `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h1 style="color: #000;">AURORA.</h1>
+          <p>Hi ${userName},</p>
+          <p>Your order has been placed successfully.</p>
           <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p><strong>Order ID:</strong> #${order.id.slice(-6).toUpperCase()}</p><p><strong>Amount:</strong> ₹${total}</p>
+          <p><strong>Order ID:</strong> #${order.id.slice(-6).toUpperCase()}</p>
+          <p><strong>Amount:</strong> ₹${total}</p>
           <p><strong>Status:</strong> ${paymentId ? "Paid Online" : "Processing"}</p>
-        </div>`
+          <br/>
+          <p style="color: #888; font-size: 12px;">Thank you for shopping with us.</p>
+        </div>
+        `
       );
     }
 
     await prismaClient.cart.deleteMany({ where: { userId: user.id } });
-    revalidatePath("/orders"); revalidatePath("/cart");
+    revalidatePath("/orders"); 
+    revalidatePath("/cart");
+    
     return { success: true, orderId: order.id };
-  } catch (err: any) { return { success: false, message: err.message }; }
+
+  } catch (err: any) {
+    console.error("Order Failed:", err);
+    return { success: false, message: err.message };
+  }
 }
 
 // ==========================================================
-// 👤 AUTH & PROFILE
+// 👤 AUTH & PROFILE ACTIONS
 // ==========================================================
 
 export async function logoutUser() {
@@ -241,61 +300,142 @@ export async function logoutUser() {
   redirect("/login");
 }
 
-export async function deleteAccount() { return deleteUserAccount(); }
+export async function deleteAccount() {
+  return deleteUserAccount();
+}
 
 export async function deleteUserAccount() {
   const user = await getCurrentUser();
   if (!user) return { success: false, message: "Not logged in" };
+
   try {
-    const userOrders = await prismaClient.order.findMany({ where: { userId: user.id }, select: { id: true } });
+    const userOrders = await prismaClient.order.findMany({
+      where: { userId: user.id },
+      select: { id: true },
+    });
     const orderIds = userOrders.map((o) => o.id);
+
     await prismaClient.$transaction([
-      prismaClient.orderItem.deleteMany({ where: { orderId: { in: orderIds } } }), prismaClient.order.deleteMany({ where: { userId: user.id } }), prismaClient.cart.deleteMany({ where: { userId: user.id } }),
-      prismaClient.wishlist.deleteMany({ where: { userId: user.id } }), prismaClient.product.deleteMany({ where: { ownerId: user.id } }), prismaClient.user.delete({ where: { id: user.id } }),
+      prismaClient.orderItem.deleteMany({ where: { orderId: { in: orderIds } } }),
+      prismaClient.order.deleteMany({ where: { userId: user.id } }),
+      prismaClient.cart.deleteMany({ where: { userId: user.id } }),
+      prismaClient.wishlist.deleteMany({ where: { userId: user.id } }),
+      prismaClient.product.deleteMany({ where: { ownerId: user.id } }),
+      prismaClient.user.delete({ where: { id: user.id } }),
     ]);
-    const cookieStore = await cookies(); cookieStore.delete("token"); return { success: true };
-  } catch (err: any) { return { success: false, message: err.message }; }
+
+    const cookieStore = await cookies();
+    cookieStore.delete("token");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Delete Account Error:", err);
+    return { success: false, message: err.message };
+  }
 }
+
+// ==========================================================
+// ❤️ WISHLIST ACTIONS
+// ==========================================================
 
 export async function toggleWishlist(product: any) {
   const user = await getCurrentUser();
   if (!user) return { success: false, message: "Login required" };
+
   try {
     const prodId = String(product.id);
-    const existing = await prismaClient.wishlist.findFirst({ where: { userId: user.id, productId: prodId } });
-    if (existing) { await prismaClient.wishlist.delete({ where: { id: existing.id } }); revalidatePath("/"); return { success: true, action: "removed" }; } 
-    else { await prismaClient.wishlist.create({ data: { userId: user.id, productId: prodId, title: product.title, price: parseFloat(product.price), image_url: product.thumbnail || product.image_url || "" } }); revalidatePath("/"); return { success: true, action: "added" }; }
-  } catch (err) { return { success: false, message: "Failed" }; }
+    const existing = await prismaClient.wishlist.findFirst({
+      where: { userId: user.id, productId: prodId },
+    });
+
+    if (existing) {
+      await prismaClient.wishlist.delete({ where: { id: existing.id } });
+      revalidatePath("/");
+      return { success: true, action: "removed" };
+    } else {
+      await prismaClient.wishlist.create({
+        data: {
+          userId: user.id,
+          productId: prodId,
+          title: product.title,
+          price: parseFloat(product.price),
+          image_url:
+            product.thumbnail || product.image_url || "",
+        },
+      });
+      revalidatePath("/");
+      return { success: true, action: "added" };
+    }
+  } catch (err) {
+    return { success: false, message: "Failed" };
+  }
 }
 
 export async function getWishlist() {
   const user = await getCurrentUser();
   if (!user) return [];
-  return await prismaClient.wishlist.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" } });
+  return await prismaClient.wishlist.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+  });
 }
+
+// ==========================================================
+// ⭐ REVIEW ACTIONS
+// ==========================================================
 
 export async function addReview(formData: FormData) {
   const user = await getCurrentUser();
-  if (!user) return { success: false, message: "Please login" };
+  if (!user) return { success: false, message: "Please login to review" };
+
   const productId = formData.get("productId") as string;
   const comment = formData.get("comment") as string;
   const rating = parseInt(formData.get("rating") as string);
-  if (!comment || !rating) return { success: false, message: "Fields required" };
+
+  if (!comment || !rating) return { success: false, message: "All fields required" };
+
   try {
     let product = await prismaClient.product.findUnique({ where: { id: productId } });
+
     if (!product) {
         const res = await fetch(`https://dummyjson.com/products/${productId}`);
         if (!res.ok) return { success: false, message: "Product not found" };
         const apiData = await res.json();
-        product = await prismaClient.product.create({ data: { id: productId, title: apiData.title, description: apiData.description, price: apiData.price, category: apiData.category, thumbnail: apiData.thumbnail, images: apiData.images || [], ownerId: null } });
+        product = await prismaClient.product.create({
+            data: {
+                id: productId,
+                title: apiData.title,
+                description: apiData.description,
+                price: apiData.price,
+                category: apiData.category,
+                thumbnail: apiData.thumbnail,
+                images: apiData.images || [],
+                ownerId: null 
+            }
+        });
     }
-    if (product.ownerId && product.ownerId === user.id) return { success: false, message: "Cannot review own product." };
-    const existing = await prismaClient.review.findFirst({ where: { userId: user.id, productId: productId } });
+
+    if (product.ownerId && product.ownerId === user.id) {
+        return { success: false, message: "Cannot review own product." };
+    }
+
+    const existing = await prismaClient.review.findFirst({
+        where: { userId: user.id, productId: productId }
+    });
+
     if(existing) return { success: false, message: "Already reviewed" };
-    const newReview = await prismaClient.review.create({ data: { userId: user.id, productId: productId, rating: rating, comment: comment }, include: { user: { select: { name: true } } } });
-    revalidatePath(`/product/${productId}`); return { success: true, newReview };
+
+    const newReview = await prismaClient.review.create({
+      data: { userId: user.id, productId: productId, rating: rating, comment: comment },
+      include: { user: { select: { name: true } } }
+    });
+
+    revalidatePath(`/product/${productId}`);
+    return { success: true, newReview };
+
   } catch (err: any) {
-    if(err.code === 'P2002' || err.message.includes("Malformed")) return { success: false, message: "Reviews disabled for this item." };
+    if(err.code === 'P2002' || err.message.includes("Malformed")) {
+         return { success: false, message: "Reviews disabled for this item." };
+    }
     return { success: false, message: err.message };
   }
 }
