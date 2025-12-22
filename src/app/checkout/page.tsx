@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Header from "../components/Header";
 import { placeOrder } from "@/actions/prodactions";
 import FadeIn from "../components/FadeIn";
-import { FiLock, FiCreditCard, FiTruck } from "react-icons/fi";
+import { FiLock, FiCreditCard } from "react-icons/fi";
 import { toast } from "sonner";
 import Script from "next/script"; 
 
@@ -40,23 +40,15 @@ export default function CheckoutPage() {
     if(!formData.fullName || !formData.address) return toast.error("Please fill details");
 
     setLoading(true);
-const res = await placeOrder(formData, "TEST_PAYMENT_ID_123");
-  
-  if (res.success) {
-      toast.success("Order Placed (Test Mode)");
-      router.push("/orders");
-  } else {
-      toast.error(res.message);
-  }
-  //RAZORPAY
+
     try {
-        // 1. Create Order (Server calculates amount)
+        // 1. Create Order on Razorpay Server
         const response = await fetch("/api/razorpay", { method: "POST" });
         const order = await response.json();
 
         if (order.error) throw new Error(order.error);
 
-        // 2. Open Razorpay
+        // 2. Open Razorpay Modal
         const options = {
             key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, 
             amount: order.amount,
@@ -64,9 +56,18 @@ const res = await placeOrder(formData, "TEST_PAYMENT_ID_123");
             name: "Aurora Store",
             description: "Premium Checkout",
             order_id: order.id,
+            
+            // --- SUCCESS HANDLER ---
             handler: async function (response: any) {
                 toast.loading("Verifying Payment...");
                 
+                // Only place order IF payment ID exists
+                if (!response.razorpay_payment_id) {
+                    toast.error("Payment Failed");
+                    setLoading(false);
+                    return;
+                }
+
                 // 3. Save to DB
                 const res = await placeOrder(formData, response.razorpay_payment_id);
                 
@@ -75,8 +76,18 @@ const res = await placeOrder(formData, "TEST_PAYMENT_ID_123");
                     router.push("/orders");
                 } else {
                     toast.error("Database Error: " + res.message);
+                    setLoading(false);
                 }
             },
+            
+            // --- MODAL CLOSE HANDLER ---
+            modal: {
+                ondismiss: function() {
+                    toast.error("Payment Cancelled");
+                    setLoading(false);
+                }
+            },
+
             prefill: {
                 name: currentUser?.name,
                 email: currentUser?.email,
@@ -87,14 +98,19 @@ const res = await placeOrder(formData, "TEST_PAYMENT_ID_123");
         };
 
         const rzp1 = new window.Razorpay(options);
+        
+        // Error Handler for Launch Fail
+        rzp1.on('payment.failed', function (response: any){
+            toast.error("Payment Failed: " + response.error.description);
+            setLoading(false);
+        });
+
         rzp1.open();
-        setLoading(false);
 
     } catch (error: any) {
         toast.error("Payment Failed", { description: error.message });
         setLoading(false);
     }
-
   };
 
   return (
@@ -146,13 +162,11 @@ const res = await placeOrder(formData, "TEST_PAYMENT_ID_123");
                     <div className="space-y-4 mb-8">
                         <div className="flex items-center gap-4 p-4 bg-white/10 rounded-xl border border-white/10 cursor-pointer hover:bg-white/20 transition">
                             <FiCreditCard className="text-xl" />
-                            <span className="font-bold text-sm">Cards, UPI & Netbanking</span>
+                            <span className="font-bold text-sm">Pay Online (Razorpay)</span>
                         </div>
                     </div>
 
-                    <p className="text-xs text-gray-400 mb-6 text-center leading-relaxed">
-                        Securely processed by Razorpay.
-                    </p>
+                    <p className="text-xs text-gray-400 mb-6 text-center leading-relaxed">Securely pay using UPI, Cards, or Netbanking.</p>
 
                     <button 
                         form="checkout-form"
