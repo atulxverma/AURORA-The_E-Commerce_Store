@@ -13,14 +13,15 @@ model User {
   email    String    @unique
   password String
   name     String
-  
   image    String?
   address  String?
   city     String?
   zipCode  String?
 
+  // RELATIONS
   products Product[]
-  reviews  Review[]  // <--- NEW
+  reviews  Review[]
+  orders   Order[]   // <--- Added This (User has many orders)
 }
 
 model Product {
@@ -36,12 +37,11 @@ model Product {
   ownerId     String?  @db.ObjectId
   owner       User?    @relation(fields: [ownerId], references: [id])
   
-  reviews     Review[] // <--- NEW
+  reviews     Review[] 
   
   createdAt   DateTime? @default(now())
 }
 
-// --- NEW MODEL ---
 model Review {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   rating    Int
@@ -56,7 +56,6 @@ model Review {
   createdAt DateTime @default(now())
 }
 
-// ... (Keep Cart, Order, OrderItem, Wishlist exactly as they are) ...
 model Cart {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
   userId      String    @db.ObjectId
@@ -73,7 +72,11 @@ model Cart {
 
 model Order {
   id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // USER RELATION (Corrected)
   userId      String      @db.ObjectId
+  user        User        @relation(fields: [userId], references: [id])
+
   fullName    String
   address     String
   city        String
@@ -82,6 +85,7 @@ model Order {
   totalAmount Float
   status      String      @default("Processing")
   paymentId   String?  
+  
   items       OrderItem[]
   createdAt   DateTime    @default(now())
 }

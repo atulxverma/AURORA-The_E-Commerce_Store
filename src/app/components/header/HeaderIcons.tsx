@@ -1,17 +1,21 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { FiUser, FiShoppingBag, FiLogOut, FiSettings, FiHeart, FiGrid } from "react-icons/fi";
+import { FiUser, FiShoppingBag, FiLogOut, FiSettings, FiHeart, FiGrid, FiShield } from "react-icons/fi";
 
 interface HeaderIconsProps {
   currentUser: any;
   handleLogout: () => void;
 }
 
+// ADMIN EMAIL (Isse match karke button dikhayenge)
+const ADMIN_EMAIL = "atulv9926@gmail.com"; 
+
 export default function HeaderIcons({ currentUser, handleLogout }: HeaderIconsProps) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
+  // Click Outside to Close Profile Menu
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
@@ -22,10 +26,12 @@ export default function HeaderIcons({ currentUser, handleLogout }: HeaderIconsPr
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const isAdmin = currentUser?.email === ADMIN_EMAIL;
+
   return (
     <div className="flex items-center gap-4">
       
-      {/* DASHBOARD BUTTON (Only Logged In) */}
+      {/* DASHBOARD BUTTON (For all logged in users) */}
       {currentUser && (
         <Link
           href="/profile?tab=overview"
@@ -69,7 +75,13 @@ export default function HeaderIcons({ currentUser, handleLogout }: HeaderIconsPr
               <p className="text-[10px] font-bold text-gray-400 truncate uppercase tracking-wide">{currentUser.email}</p>
             </div>
 
-            {/* ONLY SETTINGS LINK */}
+            {/* --- ADMIN PANEL LINK (Only visible to you) --- */}
+            {isAdmin && (
+                <Link href="/admin" className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-xl transition cursor-pointer mb-1">
+                    <FiShield size={16} /> Admin Panel
+                </Link>
+            )}
+
             <Link href="/profile?tab=settings" className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-gray-600 hover:text-black hover:bg-gray-50 rounded-xl transition cursor-pointer">
               <FiSettings size={16} /> Account Settings
             </Link>
