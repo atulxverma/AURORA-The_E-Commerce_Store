@@ -14,7 +14,15 @@ export const metadata: Metadata = {
   // Agar upar wala link change ho jaye, to jo final link hai wo daalna
   
   title: "Aurora | Defining Luxury",
+  manifest: "/manifest.json",
+  themeColor: "#000000", 
   description: "Experience the future of e-commerce. Curated, exclusive, and designed for the modern aesthetic.",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Aurora",
+  },
   
   openGraph: {
     title: "Aurora Store",
