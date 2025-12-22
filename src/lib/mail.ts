@@ -1,17 +1,12 @@
-// lib/mail.ts
 import nodemailer from "nodemailer";
 
-export const sendEmail = async (
-  to: string,
-  subject: string,
-  html: string
-) => {
+export const sendEmail = async (to: string, subject: string, html: string) => {
   try {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_PASS, // App Password
+        user: process.env.GMAIL_USER, // Tera Gmail (e.g. atulv9926@gmail.com)
+        pass: process.env.GMAIL_PASS, // 16-digit App Password (NOT login password)
       },
     });
 
@@ -22,10 +17,10 @@ export const sendEmail = async (
       html,
     });
 
-    console.log("✅ Email sent:", info.messageId);
+    console.log("✅ Email sent: ", info.messageId);
     return true;
   } catch (error) {
-    console.error("❌ Email failed:", error);
+    console.error("❌ Email failed: ", error);
     return false;
   }
 };

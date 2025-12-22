@@ -4,7 +4,7 @@ import { FiHeart } from "react-icons/fi";
 import { toggleWishlist } from "@/actions/prodactions";
 import { FaHeart } from "react-icons/fa"; 
 import { useRouter } from "next/navigation";
-import { toast } from "sonner"; // Import Toast
+import { toast } from "sonner"; 
 
 export default function WishlistButton({ product, initialLiked }: { product: any, initialLiked: boolean }) {
   const [liked, setLiked] = useState(initialLiked);
@@ -26,7 +26,7 @@ export default function WishlistButton({ product, initialLiked }: { product: any
     const newState = !liked;
     setLiked(newState); 
 
-    // Instant Feedback
+    // Instant Toast Feedback
     if(newState) toast.success("Added to Favorites");
     else toast.info("Removed from Favorites");
 
@@ -36,16 +36,19 @@ export default function WishlistButton({ product, initialLiked }: { product: any
 
     startTransition(async () => {
       const res = await toggleWishlist(product);
+      
       if (!res.success) {
         setLiked(!newState); // Revert
         window.dispatchEvent(new CustomEvent("wishlist-updated", { detail: { id: product.id, status: !newState } }));
         
-        // Error Toast
-        if (res.message.includes("Login")) {
+        // --- FIX: SAFE ACCESS TO MESSAGE ---
+        const msg = res.message || "Unknown Error";
+
+        if (msg.includes("Login") || msg.includes("Unauthorized")) {
             toast.error("Please Login", { description: "You need an account to save items." });
             router.push("/login");
         } else {
-            toast.error("Action Failed");
+            toast.error("Action Failed", { description: msg });
         }
       }
     });

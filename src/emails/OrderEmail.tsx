@@ -21,7 +21,7 @@ export default function OrderEmail({ customerName, orderId, amount }: any) {
           </Section>
 
           <Hr style={hr} />
-          <Text style={footer}>© 2024 Aurora Store. Defining Luxury.</Text>
+          <Text style={footer}>© 2026 Aurora Store. Defining Luxury.</Text>
         </Container>
       </Body>
     </Html>
