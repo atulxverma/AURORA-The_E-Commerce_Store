@@ -35,7 +35,7 @@ export default function AdminChart({ data }: { data: any[] }) {
             contentStyle={{ backgroundColor: '#000', borderRadius: '12px', border: 'none', color: '#fff', boxShadow: '0 10px 30px -10px rgba(0,0,0,0.3)' }}
             itemStyle={{ color: '#fff', fontWeight: 'bold' }}
             cursor={{ stroke: '#E5E7EB', strokeWidth: 2 }}
-            formatter={(value: number) => [`₹${value.toLocaleString()}`, "Revenue"]}
+            formatter={(value: any) => [`₹${Number(value).toLocaleString()}`, "Revenue"]}
           />
           <Area 
             type="monotone" 
