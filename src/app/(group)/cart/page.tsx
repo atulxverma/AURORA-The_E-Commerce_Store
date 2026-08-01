@@ -63,7 +63,6 @@ export default async function CartPage() {
         </div>
     );
   }
-
   // --- 3. FILLED CART UI (WITH HEADER) ---
   return (
     <div className="min-h-screen bg-gray-50">
