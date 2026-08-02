@@ -40,7 +40,6 @@ export default async function CartPage() {
     where: { userId: user.id },
     orderBy: { createdAt: "desc" }
   });
-
   // --- 2. EMPTY CART UI (NO HEADER) ---
   if (cartItems.length === 0) {
     return (
