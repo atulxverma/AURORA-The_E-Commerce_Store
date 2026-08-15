@@ -9,9 +9,8 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  // --- FIX: ADD THIS LINE (Apna Vercel domain yahan daal) ---
+  
   metadataBase: new URL('https://aurora-the-e-commerce-store.vercel.app'), 
-  // Agar upar wala link change ho jaye, to jo final link hai wo daalna
   
   title: "Aurora | Defining Luxury",
   manifest: "/manifest.json",
